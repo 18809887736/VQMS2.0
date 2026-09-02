@@ -6,6 +6,9 @@
     python -m src.cli gen     --group regulation --out output/all_regulation.sql --with-ddl
     python -m src.cli gen     --all --out output/ --split          # 每场景一文件
     python -m src.cli manifest --out output/manifest.json          # 期望结论清单（测试 oracle）
+    python -m src.cli range    --start 2026-02-27 --end 2026-03-31 --out output/month.sql
+                                                                 # 区间模式：前 N 天铺场景（N=场景数），
+                                                                 # 全部天数叠背景正常数据；manifest 同名 .manifest.json
 """
 from __future__ import annotations
 
@@ -82,6 +85,11 @@ def main(argv=None) -> int:
     p_man = sub.add_parser("manifest", help="输出场景→期望结论 manifest.json")
     p_man.add_argument("--out", required=True)
 
+    p_rng = sub.add_parser("range", help="生成日期区间数据（场景日+背景日）")
+    p_rng.add_argument("--start", required=True, help="起始日 YYYY-MM-DD（含）")
+    p_rng.add_argument("--end", required=True, help="结束日 YYYY-MM-DD（含）")
+    p_rng.add_argument("--out", required=True, help="输出 .sql（manifest 自动写同名 .manifest.json）")
+
     args = parser.parse_args(argv)
     cfg = _load_config()
 
@@ -128,6 +136,64 @@ def main(argv=None) -> int:
                     # 前置 schema：拼接到同目录 00-schema.sql（split 模式更清晰，这里只提示）
                     print("[note] --with-ddl 建议配合 --split 或单场景；多场景合并请单独跑 `schema`")
             print(f"[OK] {len(bundles)} 场景 -> {out}")
+        return 0
+
+    if args.cmd == "range":
+        from copy import copy
+        from .emitters.his_curve_sv import emit_his_curve_sv_rows
+        from .emitters.warn_info import emit_warn_info_rows
+        from .emitters.yc_history import emit_yc_history_rows
+        from .background import emit_background_rows
+        from .timeutil import round_to_minute
+        from .sql_writer import _emit_insert
+
+        start = datetime.strptime(args.start, "%Y-%m-%d")
+        end = datetime.strptime(args.end, "%Y-%m-%d")
+        if end < start:
+            raise SystemExit("--end 不能早于 --start")
+        days = [start + timedelta(days=i) for i in range((end - start).days + 1)]
+
+        all_rows = {"his_curve_sv": [], "warn_info": [], "yc_history": []}
+        manifest = []
+        for di, day in enumerate(days):
+            occ = {"curve": set(), "cmd": set(), "yc": set()}
+            if di < len(ALL_SCENARIOS):
+                sc = ALL_SCENARIOS[di]
+                cfg_day = copy(cfg)
+                cfg_day.base_date = day
+                b = sc.build(cfg_day)
+                manifest.append({"id": b.scenario_id, "date": day.date().isoformat(),
+                                 "description": b.description, "expected": b.expected})
+                rows_c = emit_his_curve_sv_rows(b)
+                rows_w = emit_warn_info_rows(b)
+                rows_y = emit_yc_history_rows(b)
+                for r in rows_c:
+                    dt = datetime.strptime(r["save_time"], "%Y-%m-%d %H:%M:%S.%f")
+                    occ["curve"].add((r["busbar_num"], round_to_minute(dt)))
+                for r in rows_w:
+                    occ["cmd"].add((r["warn_time"], r["obj_num"]))
+                for r in rows_y:
+                    occ["yc"].add((r["yc_num"], r["yc_time"]))
+                all_rows["his_curve_sv"] += rows_c
+                all_rows["warn_info"] += rows_w
+                all_rows["yc_history"] += rows_y
+            bg = emit_background_rows(di, day, occ)
+            for k in all_rows:
+                all_rows[k] += bg[k]
+
+        out = Path(args.out)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        n_scen = min(len(days), len(ALL_SCENARIOS))
+        parts = [f"-- range {args.start} ~ {args.end}（{len(days)} 天：场景日 {n_scen} + 背景全覆盖）",
+                 "SET NAMES utf8mb4;", ""]
+        for t in ("his_curve_sv", "warn_info", "yc_history"):
+            parts.append(_emit_insert(t, all_rows[t]))
+            parts.append("")
+        out.write_text("\n".join(parts), encoding="utf-8")
+        mpath = out.with_suffix(".manifest.json")
+        mpath.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+        counts = {t: len(v) for t, v in all_rows.items()}
+        print(f"[OK] range {args.start}~{args.end} -> {out}  行数 {counts}；manifest -> {mpath}")
         return 0
 
     return 0
