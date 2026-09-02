@@ -48,7 +48,7 @@ VQMS（Voltage Quality Management System）= 基于 **RuoYi-Vue**（前后端分
 
 ## 注意事项
 
-- `docs/政策口径/东北区域发电厂并网运行管理实施细则_2023.pdf` 文件名有误导：正文载明 2020-10-01 执行，**实为 2020 版（113 号文）**，仅作历史对比；实现一律以 **2024 版**为准
+- 实现口径一律以 **2024 版**细则为准（2020 版旧文件已从仓库移除）
 - 仓库根 `.gitignore` 含 `*.zip` 规则，需入库的 zip 要 `git add -f`
 - `myRuoYi-Vue-springboot3` 的 7 个 ruoyi-* 模块目录设了 Windows 只读属性（attrib +R）；构建前需解除：
   ```bash
