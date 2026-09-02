@@ -2,6 +2,7 @@ package com.ruoyi.vqms.source;
 
 import javax.sql.DataSource;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -38,7 +39,8 @@ public class SourceDataSourceConfig {
     }
 
     @Bean("sourceJdbcTemplate")
-    public JdbcTemplate sourceJdbcTemplate(DataSource vqmsSourceDataSource) {
+    public JdbcTemplate sourceJdbcTemplate(
+            @Qualifier("vqmsSourceDataSource") DataSource vqmsSourceDataSource) {
         JdbcTemplate t = new JdbcTemplate(vqmsSourceDataSource);
         t.setQueryTimeout(120);
         t.setMaxRows(1_000_000);
