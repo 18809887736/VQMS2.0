@@ -28,6 +28,12 @@ VQMS (Voltage Quality Management System) is an AVC bus-voltage quality monitorin
 ## 代码规约 / Code Conventions
 
 - **新增后端代码保存到 `myRuoYi-Vue-springboot3/ruoyi-vqms/`** / New backend code goes into the dedicated `ruoyi-vqms` Maven module（新建业务模块：根 pom.xml 声明 `<module>`，ruoyi-admin 引用依赖 / new business module: declare `<module>` in the root pom.xml and add the dependency in ruoyi-admin）
+- **核心算法必须解耦（Leo 2026-09-02 拍板）** / Core algorithms MUST be decoupled：
+  - `statistics` 包 = **无状态纯函数**（判定/解码/统计/策略求值），不依赖 Spring/DB/网络，输入输出显式，可独立 TDD / the `statistics` package holds stateless pure functions with explicit inputs/outputs — no Spring, no DB, no network
+  - 判定算法**注册表 + ID**（V2_0/STUB），配置选择可替换 / judgment algorithms registered by ID, swappable via config
+  - `source` 包 = 外部库只读 Reader 接口，实现可切换 / the `source` package isolates external-DB access behind Reader interfaces
+  - `ingestion` 包 = 管线**编排**（取数→门控→判定→免考→落库），业务逻辑全部下沉纯函数 / the `ingestion` package only orchestrates; all logic lives in pure functions
+  - DB 只落结果，率/罚款查询层重算；参数快照随行（algorithm_id/t_fast_snapshot/decode_algorithm）/ DB stores results only; rates/penalties recomputed at query layer; parameter snapshots travel with rows
 
 ## 数据库规约 / Database Conventions
 
