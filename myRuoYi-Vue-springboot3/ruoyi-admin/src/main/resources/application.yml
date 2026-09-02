@@ -142,3 +142,12 @@ xss:
   excludes: /system/notice
   # 匹配链接
   urlPatterns: /system/*,/monitor/*,/tool/*
+
+# VQMS 外部源库（只读，与主库隔离；口令经环境变量注入，不入受跟踪文件）
+vqms:
+  source:
+    jdbc:
+      url: ${VQMS_SOURCE_JDBC_URL:}
+      username: ${VQMS_SOURCE_JDBC_USERNAME:root}
+      password: ${VQMS_SOURCE_JDBC_PASSWORD:}
+      driver-class-name: com.mysql.cj.jdbc.Driver

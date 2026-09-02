@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.vqms.mapper.VqmsCommandLedgerMapper">
+
+    <insert id="insertIgnoreBatch">
+        insert ignore into vqms_command_ledger
+            (warn_time_raw, cmd_time, millisecond, warn_type, obj_num, warn_content, fetched_at)
+        values
+        <foreach collection="list" item="r" separator=",">
+            (#{r.warnTimeRaw}, #{r.cmdTime}, #{r.millisecond}, #{r.warnType}, #{r.objNum}, #{r.warnContent}, sysdate())
+        </foreach>
+    </insert>
+
+    <select id="countByRange" resultType="long">
+        select count(*) from vqms_command_ledger
+        where cmd_time &gt;= #{start} and cmd_time &lt;= #{end}
+    </select>
+
+</mapper>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.vqms.mapper.VqmsIngestLogMapper">
+
+    <insert id="insertIgnore">
+        insert ignore into vqms_ingest_log
+            (batch_no, source_table, range_start, range_end,
+             rows_read, rows_accepted, rows_skipped_dirty, rows_skipped_dup,
+             skip_detail, status, started_at, finished_at, remark)
+        values
+            (#{batchNo}, #{sourceTable}, #{rangeStart}, #{rangeEnd},
+             #{rowsRead}, #{rowsAccepted}, #{rowsSkippedDirty}, #{rowsSkippedDup},
+             #{skipDetail}, #{status}, #{startedAt}, #{finishedAt}, #{remark})
+    </insert>
+
+</mapper>

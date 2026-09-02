@@ -77,6 +77,12 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: "6379"
       SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD}
+      # VQMS 外部源库（qheat-sim 宿主 3306；口令仅经 .env 注入）
+      VQMS_SOURCE_JDBC_URL: ${VQMS_SOURCE_JDBC_URL:-jdbc:mysql://host.docker.internal:3306/qheatavchisdb?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true}
+      VQMS_SOURCE_JDBC_USERNAME: ${VQMS_SOURCE_JDBC_USERNAME:-root}
+      VQMS_SOURCE_JDBC_PASSWORD: ${VQMS_SOURCE_JDBC_PASSWORD}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       # logback.xml 中 log.path=/home/ruoyi/logs
       - /opt/apps/iflytek/ruoyi-backend-logs:/home/ruoyi/logs
