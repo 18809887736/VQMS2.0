@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.vqms.mapper.VqmsBusbarThresholdMapper">
+    
+    <resultMap type="VqmsBusbarThreshold" id="VqmsBusbarThresholdResult">
+        <result property="thresholdId"    column="threshold_id"    />
+        <result property="busbarNum"    column="busbar_num"    />
+        <result property="criterionType"    column="criterion_type"    />
+        <result property="toleranceV"    column="tolerance_v"    />
+        <result property="effectiveFrom"    column="effective_from"    />
+        <result property="effectiveTo"    column="effective_to"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="remark"    column="remark"    />
+    </resultMap>
+
+    <sql id="selectVqmsBusbarThresholdVo">
+        select threshold_id, busbar_num, criterion_type, tolerance_v, effective_from, effective_to, create_by, create_time, update_by, update_time, remark from vqms_busbar_threshold
+    </sql>
+
+    <select id="selectVqmsBusbarThresholdList" parameterType="VqmsBusbarThreshold" resultMap="VqmsBusbarThresholdResult">
+        <include refid="selectVqmsBusbarThresholdVo"/>
+        <where>  
+            <if test="busbarNum != null "> and busbar_num = #{busbarNum}</if>
+            <if test="criterionType != null  and criterionType != ''"> and criterion_type = #{criterionType}</if>
+            <if test="toleranceV != null "> and tolerance_v = #{toleranceV}</if>
+            <if test="effectiveFrom != null "> and effective_from = #{effectiveFrom}</if>
+            <if test="effectiveTo != null "> and effective_to = #{effectiveTo}</if>
+        </where>
+    </select>
+    
+    <select id="selectVqmsBusbarThresholdByThresholdId" parameterType="Long" resultMap="VqmsBusbarThresholdResult">
+        <include refid="selectVqmsBusbarThresholdVo"/>
+        where threshold_id = #{thresholdId}
+    </select>
+
+    <insert id="insertVqmsBusbarThreshold" parameterType="VqmsBusbarThreshold" useGeneratedKeys="true" keyProperty="thresholdId">
+        insert into vqms_busbar_threshold
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="busbarNum != null">busbar_num,</if>
+            <if test="criterionType != null and criterionType != ''">criterion_type,</if>
+            <if test="toleranceV != null">tolerance_v,</if>
+            <if test="effectiveFrom != null">effective_from,</if>
+            <if test="effectiveTo != null">effective_to,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+            <if test="remark != null">remark,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="busbarNum != null">#{busbarNum},</if>
+            <if test="criterionType != null and criterionType != ''">#{criterionType},</if>
+            <if test="toleranceV != null">#{toleranceV},</if>
+            <if test="effectiveFrom != null">#{effectiveFrom},</if>
+            <if test="effectiveTo != null">#{effectiveTo},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+            <if test="remark != null">#{remark},</if>
+         </trim>
+    </insert>
+
+    <update id="updateVqmsBusbarThreshold" parameterType="VqmsBusbarThreshold">
+        update vqms_busbar_threshold
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="busbarNum != null">busbar_num = #{busbarNum},</if>
+            <if test="criterionType != null and criterionType != ''">criterion_type = #{criterionType},</if>
+            <if test="toleranceV != null">tolerance_v = #{toleranceV},</if>
+            <if test="effectiveFrom != null">effective_from = #{effectiveFrom},</if>
+            <if test="effectiveTo != null">effective_to = #{effectiveTo},</if>
+            <if test="createBy != null">create_by = #{createBy},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="remark != null">remark = #{remark},</if>
+        </trim>
+        where threshold_id = #{thresholdId}
+    </update>
+
+    <delete id="deleteVqmsBusbarThresholdByThresholdId" parameterType="Long">
+        delete from vqms_busbar_threshold where threshold_id = #{thresholdId}
+    </delete>
+
+    <delete id="deleteVqmsBusbarThresholdByThresholdIds" parameterType="String">
+        delete from vqms_busbar_threshold where threshold_id in 
+        <foreach item="thresholdId" collection="array" open="(" separator="," close=")">
+            #{thresholdId}
+        </foreach>
+    </delete>
+</mapper>

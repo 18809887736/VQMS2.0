@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.vqms.mapper.VqmsPolicyParamMapper">
+    
+    <resultMap type="VqmsPolicyParam" id="VqmsPolicyParamResult">
+        <result property="paramId"    column="param_id"    />
+        <result property="paramKey"    column="param_key"    />
+        <result property="paramValue"    column="param_value"    />
+        <result property="name"    column="name"    />
+        <result property="description"    column="description"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <result property="updateTime"    column="update_time"    />
+    </resultMap>
+
+    <sql id="selectVqmsPolicyParamVo">
+        select param_id, param_key, param_value, name, description, create_by, create_time, update_by, update_time from vqms_policy_param
+    </sql>
+
+    <select id="selectVqmsPolicyParamList" parameterType="VqmsPolicyParam" resultMap="VqmsPolicyParamResult">
+        <include refid="selectVqmsPolicyParamVo"/>
+        <where>  
+            <if test="paramKey != null  and paramKey != ''"> and param_key = #{paramKey}</if>
+            <if test="paramValue != null  and paramValue != ''"> and param_value = #{paramValue}</if>
+            <if test="name != null  and name != ''"> and name like concat('%', #{name}, '%')</if>
+            <if test="description != null  and description != ''"> and description = #{description}</if>
+        </where>
+    </select>
+    
+    <select id="selectVqmsPolicyParamByParamId" parameterType="Long" resultMap="VqmsPolicyParamResult">
+        <include refid="selectVqmsPolicyParamVo"/>
+        where param_id = #{paramId}
+    </select>
+
+    <insert id="insertVqmsPolicyParam" parameterType="VqmsPolicyParam" useGeneratedKeys="true" keyProperty="paramId">
+        insert into vqms_policy_param
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="paramKey != null and paramKey != ''">param_key,</if>
+            <if test="paramValue != null">param_value,</if>
+            <if test="name != null and name != ''">name,</if>
+            <if test="description != null">description,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="paramKey != null and paramKey != ''">#{paramKey},</if>
+            <if test="paramValue != null">#{paramValue},</if>
+            <if test="name != null and name != ''">#{name},</if>
+            <if test="description != null">#{description},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+         </trim>
+    </insert>
+
+    <update id="updateVqmsPolicyParam" parameterType="VqmsPolicyParam">
+        update vqms_policy_param
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="paramKey != null and paramKey != ''">param_key = #{paramKey},</if>
+            <if test="paramValue != null">param_value = #{paramValue},</if>
+            <if test="name != null and name != ''">name = #{name},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="createBy != null">create_by = #{createBy},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where param_id = #{paramId}
+    </update>
+
+    <delete id="deleteVqmsPolicyParamByParamId" parameterType="Long">
+        delete from vqms_policy_param where param_id = #{paramId}
+    </delete>
+
+    <delete id="deleteVqmsPolicyParamByParamIds" parameterType="String">
+        delete from vqms_policy_param where param_id in 
+        <foreach item="paramId" collection="array" open="(" separator="," close=")">
+            #{paramId}
+        </foreach>
+    </delete>
+</mapper>

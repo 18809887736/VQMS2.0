@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.vqms.mapper.VqmsBusbarMapper">
+    
+    <resultMap type="VqmsBusbar" id="VqmsBusbarResult">
+        <result property="busbarNum"    column="busbar_num"    />
+        <result property="busbarName"    column="busbar_name"    />
+        <result property="vGrade"    column="v_grade"    />
+        <result property="groupNum"    column="group_num"    />
+        <result property="nominalKv"    column="nominal_kv"    />
+        <result property="realtimeYcNum"    column="realtime_yc_num"    />
+        <result property="status"    column="status"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="remark"    column="remark"    />
+    </resultMap>
+
+    <sql id="selectVqmsBusbarVo">
+        select busbar_num, busbar_name, v_grade, group_num, nominal_kv, realtime_yc_num, status, create_by, create_time, update_by, update_time, remark from vqms_busbar
+    </sql>
+
+    <select id="selectVqmsBusbarList" parameterType="VqmsBusbar" resultMap="VqmsBusbarResult">
+        <include refid="selectVqmsBusbarVo"/>
+        <where>  
+            <if test="busbarName != null  and busbarName != ''"> and busbar_name like concat('%', #{busbarName}, '%')</if>
+            <if test="vGrade != null "> and v_grade = #{vGrade}</if>
+            <if test="groupNum != null "> and group_num = #{groupNum}</if>
+            <if test="nominalKv != null "> and nominal_kv = #{nominalKv}</if>
+            <if test="realtimeYcNum != null "> and realtime_yc_num = #{realtimeYcNum}</if>
+            <if test="status != null  and status != ''"> and status = #{status}</if>
+        </where>
+    </select>
+    
+    <select id="selectVqmsBusbarByBusbarNum" parameterType="Long" resultMap="VqmsBusbarResult">
+        <include refid="selectVqmsBusbarVo"/>
+        where busbar_num = #{busbarNum}
+    </select>
+
+    <insert id="insertVqmsBusbar" parameterType="VqmsBusbar">
+        insert into vqms_busbar
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="busbarNum != null">busbar_num,</if>
+            <if test="busbarName != null and busbarName != ''">busbar_name,</if>
+            <if test="vGrade != null">v_grade,</if>
+            <if test="groupNum != null">group_num,</if>
+            <if test="nominalKv != null">nominal_kv,</if>
+            <if test="realtimeYcNum != null">realtime_yc_num,</if>
+            <if test="status != null and status != ''">status,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+            <if test="remark != null">remark,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="busbarNum != null">#{busbarNum},</if>
+            <if test="busbarName != null and busbarName != ''">#{busbarName},</if>
+            <if test="vGrade != null">#{vGrade},</if>
+            <if test="groupNum != null">#{groupNum},</if>
+            <if test="nominalKv != null">#{nominalKv},</if>
+            <if test="realtimeYcNum != null">#{realtimeYcNum},</if>
+            <if test="status != null and status != ''">#{status},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+            <if test="remark != null">#{remark},</if>
+         </trim>
+    </insert>
+
+    <update id="updateVqmsBusbar" parameterType="VqmsBusbar">
+        update vqms_busbar
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="busbarName != null and busbarName != ''">busbar_name = #{busbarName},</if>
+            <if test="vGrade != null">v_grade = #{vGrade},</if>
+            <if test="groupNum != null">group_num = #{groupNum},</if>
+            <if test="nominalKv != null">nominal_kv = #{nominalKv},</if>
+            <if test="realtimeYcNum != null">realtime_yc_num = #{realtimeYcNum},</if>
+            <if test="status != null and status != ''">status = #{status},</if>
+            <if test="createBy != null">create_by = #{createBy},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="remark != null">remark = #{remark},</if>
+        </trim>
+        where busbar_num = #{busbarNum}
+    </update>
+
+    <delete id="deleteVqmsBusbarByBusbarNum" parameterType="Long">
+        delete from vqms_busbar where busbar_num = #{busbarNum}
+    </delete>
+
+    <delete id="deleteVqmsBusbarByBusbarNums" parameterType="String">
+        delete from vqms_busbar where busbar_num in 
+        <foreach item="busbarNum" collection="array" open="(" separator="," close=")">
+            #{busbarNum}
+        </foreach>
+    </delete>
+</mapper>

@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.vqms.mapper.VqmsReactiveDeviceMapper">
+    
+    <resultMap type="VqmsReactiveDevice" id="VqmsReactiveDeviceResult">
+        <result property="deviceId"    column="device_id"    />
+        <result property="entityId"    column="entity_id"    />
+        <result property="deviceCode"    column="device_code"    />
+        <result property="deviceName"    column="device_name"    />
+        <result property="deviceType"    column="device_type"    />
+        <result property="inAvcLoop"    column="in_avc_loop"    />
+        <result property="ratedSKva"    column="rated_s_kva"    />
+        <result property="ratedQUpKvar"    column="rated_q_up_kvar"    />
+        <result property="ratedQDownKvar"    column="rated_q_down_kvar"    />
+        <result property="qYcNum"    column="q_yc_num"    />
+        <result property="pYcNum"    column="p_yc_num"    />
+        <result property="status"    column="status"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="remark"    column="remark"    />
+    </resultMap>
+
+    <sql id="selectVqmsReactiveDeviceVo">
+        select device_id, entity_id, device_code, device_name, device_type, in_avc_loop, rated_s_kva, rated_q_up_kvar, rated_q_down_kvar, q_yc_num, p_yc_num, status, create_by, create_time, update_by, update_time, remark from vqms_reactive_device
+    </sql>
+
+    <select id="selectVqmsReactiveDeviceList" parameterType="VqmsReactiveDevice" resultMap="VqmsReactiveDeviceResult">
+        <include refid="selectVqmsReactiveDeviceVo"/>
+        <where>  
+            <if test="entityId != null "> and entity_id = #{entityId}</if>
+            <if test="deviceCode != null  and deviceCode != ''"> and device_code = #{deviceCode}</if>
+            <if test="deviceName != null  and deviceName != ''"> and device_name like concat('%', #{deviceName}, '%')</if>
+            <if test="deviceType != null "> and device_type = #{deviceType}</if>
+            <if test="inAvcLoop != null "> and in_avc_loop = #{inAvcLoop}</if>
+            <if test="ratedSKva != null "> and rated_s_kva = #{ratedSKva}</if>
+            <if test="ratedQUpKvar != null "> and rated_q_up_kvar = #{ratedQUpKvar}</if>
+            <if test="ratedQDownKvar != null "> and rated_q_down_kvar = #{ratedQDownKvar}</if>
+            <if test="qYcNum != null "> and q_yc_num = #{qYcNum}</if>
+            <if test="pYcNum != null "> and p_yc_num = #{pYcNum}</if>
+            <if test="status != null  and status != ''"> and status = #{status}</if>
+        </where>
+    </select>
+    
+    <select id="selectVqmsReactiveDeviceByDeviceId" parameterType="Long" resultMap="VqmsReactiveDeviceResult">
+        <include refid="selectVqmsReactiveDeviceVo"/>
+        where device_id = #{deviceId}
+    </select>
+
+    <insert id="insertVqmsReactiveDevice" parameterType="VqmsReactiveDevice" useGeneratedKeys="true" keyProperty="deviceId">
+        insert into vqms_reactive_device
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="entityId != null">entity_id,</if>
+            <if test="deviceCode != null and deviceCode != ''">device_code,</if>
+            <if test="deviceName != null and deviceName != ''">device_name,</if>
+            <if test="deviceType != null">device_type,</if>
+            <if test="inAvcLoop != null">in_avc_loop,</if>
+            <if test="ratedSKva != null">rated_s_kva,</if>
+            <if test="ratedQUpKvar != null">rated_q_up_kvar,</if>
+            <if test="ratedQDownKvar != null">rated_q_down_kvar,</if>
+            <if test="qYcNum != null">q_yc_num,</if>
+            <if test="pYcNum != null">p_yc_num,</if>
+            <if test="status != null and status != ''">status,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+            <if test="remark != null">remark,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="entityId != null">#{entityId},</if>
+            <if test="deviceCode != null and deviceCode != ''">#{deviceCode},</if>
+            <if test="deviceName != null and deviceName != ''">#{deviceName},</if>
+            <if test="deviceType != null">#{deviceType},</if>
+            <if test="inAvcLoop != null">#{inAvcLoop},</if>
+            <if test="ratedSKva != null">#{ratedSKva},</if>
+            <if test="ratedQUpKvar != null">#{ratedQUpKvar},</if>
+            <if test="ratedQDownKvar != null">#{ratedQDownKvar},</if>
+            <if test="qYcNum != null">#{qYcNum},</if>
+            <if test="pYcNum != null">#{pYcNum},</if>
+            <if test="status != null and status != ''">#{status},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+            <if test="remark != null">#{remark},</if>
+         </trim>
+    </insert>
+
+    <update id="updateVqmsReactiveDevice" parameterType="VqmsReactiveDevice">
+        update vqms_reactive_device
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="entityId != null">entity_id = #{entityId},</if>
+            <if test="deviceCode != null and deviceCode != ''">device_code = #{deviceCode},</if>
+            <if test="deviceName != null and deviceName != ''">device_name = #{deviceName},</if>
+            <if test="deviceType != null">device_type = #{deviceType},</if>
+            <if test="inAvcLoop != null">in_avc_loop = #{inAvcLoop},</if>
+            <if test="ratedSKva != null">rated_s_kva = #{ratedSKva},</if>
+            <if test="ratedQUpKvar != null">rated_q_up_kvar = #{ratedQUpKvar},</if>
+            <if test="ratedQDownKvar != null">rated_q_down_kvar = #{ratedQDownKvar},</if>
+            <if test="qYcNum != null">q_yc_num = #{qYcNum},</if>
+            <if test="pYcNum != null">p_yc_num = #{pYcNum},</if>
+            <if test="status != null and status != ''">status = #{status},</if>
+            <if test="createBy != null">create_by = #{createBy},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="remark != null">remark = #{remark},</if>
+        </trim>
+        where device_id = #{deviceId}
+    </update>
+
+    <delete id="deleteVqmsReactiveDeviceByDeviceId" parameterType="Long">
+        delete from vqms_reactive_device where device_id = #{deviceId}
+    </delete>
+
+    <delete id="deleteVqmsReactiveDeviceByDeviceIds" parameterType="String">
+        delete from vqms_reactive_device where device_id in 
+        <foreach item="deviceId" collection="array" open="(" separator="," close=")">
+            #{deviceId}
+        </foreach>
+    </delete>
+</mapper>

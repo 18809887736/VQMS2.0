@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.vqms.mapper.VqmsBusbarGroupMapper">
+    
+    <resultMap type="VqmsBusbarGroup" id="VqmsBusbarGroupResult">
+        <result property="groupNum"    column="group_num"    />
+        <result property="entityId"    column="entity_id"    />
+        <result property="groupName"    column="group_name"    />
+        <result property="vGrade"    column="v_grade"    />
+        <result property="mainIndicatorYcNum"    column="main_indicator_yc_num"    />
+        <result property="defaultMainBusbarNum"    column="default_main_busbar_num"    />
+        <result property="maxStalenessMinutes"    column="max_staleness_minutes"    />
+        <result property="status"    column="status"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="remark"    column="remark"    />
+    </resultMap>
+
+    <sql id="selectVqmsBusbarGroupVo">
+        select group_num, entity_id, group_name, v_grade, main_indicator_yc_num, default_main_busbar_num, max_staleness_minutes, status, create_by, create_time, update_by, update_time, remark from vqms_busbar_group
+    </sql>
+
+    <select id="selectVqmsBusbarGroupList" parameterType="VqmsBusbarGroup" resultMap="VqmsBusbarGroupResult">
+        <include refid="selectVqmsBusbarGroupVo"/>
+        <where>  
+            <if test="entityId != null "> and entity_id = #{entityId}</if>
+            <if test="groupName != null  and groupName != ''"> and group_name like concat('%', #{groupName}, '%')</if>
+            <if test="vGrade != null "> and v_grade = #{vGrade}</if>
+            <if test="mainIndicatorYcNum != null "> and main_indicator_yc_num = #{mainIndicatorYcNum}</if>
+            <if test="defaultMainBusbarNum != null "> and default_main_busbar_num = #{defaultMainBusbarNum}</if>
+            <if test="maxStalenessMinutes != null "> and max_staleness_minutes = #{maxStalenessMinutes}</if>
+            <if test="status != null  and status != ''"> and status = #{status}</if>
+        </where>
+    </select>
+    
+    <select id="selectVqmsBusbarGroupByGroupNum" parameterType="Long" resultMap="VqmsBusbarGroupResult">
+        <include refid="selectVqmsBusbarGroupVo"/>
+        where group_num = #{groupNum}
+    </select>
+
+    <insert id="insertVqmsBusbarGroup" parameterType="VqmsBusbarGroup">
+        insert into vqms_busbar_group
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="groupNum != null">group_num,</if>
+            <if test="entityId != null">entity_id,</if>
+            <if test="groupName != null and groupName != ''">group_name,</if>
+            <if test="vGrade != null">v_grade,</if>
+            <if test="mainIndicatorYcNum != null">main_indicator_yc_num,</if>
+            <if test="defaultMainBusbarNum != null">default_main_busbar_num,</if>
+            <if test="maxStalenessMinutes != null">max_staleness_minutes,</if>
+            <if test="status != null and status != ''">status,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+            <if test="remark != null">remark,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="groupNum != null">#{groupNum},</if>
+            <if test="entityId != null">#{entityId},</if>
+            <if test="groupName != null and groupName != ''">#{groupName},</if>
+            <if test="vGrade != null">#{vGrade},</if>
+            <if test="mainIndicatorYcNum != null">#{mainIndicatorYcNum},</if>
+            <if test="defaultMainBusbarNum != null">#{defaultMainBusbarNum},</if>
+            <if test="maxStalenessMinutes != null">#{maxStalenessMinutes},</if>
+            <if test="status != null and status != ''">#{status},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+            <if test="remark != null">#{remark},</if>
+         </trim>
+    </insert>
+
+    <update id="updateVqmsBusbarGroup" parameterType="VqmsBusbarGroup">
+        update vqms_busbar_group
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="entityId != null">entity_id = #{entityId},</if>
+            <if test="groupName != null and groupName != ''">group_name = #{groupName},</if>
+            <if test="vGrade != null">v_grade = #{vGrade},</if>
+            <if test="mainIndicatorYcNum != null">main_indicator_yc_num = #{mainIndicatorYcNum},</if>
+            <if test="defaultMainBusbarNum != null">default_main_busbar_num = #{defaultMainBusbarNum},</if>
+            <if test="maxStalenessMinutes != null">max_staleness_minutes = #{maxStalenessMinutes},</if>
+            <if test="status != null and status != ''">status = #{status},</if>
+            <if test="createBy != null">create_by = #{createBy},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="remark != null">remark = #{remark},</if>
+        </trim>
+        where group_num = #{groupNum}
+    </update>
+
+    <delete id="deleteVqmsBusbarGroupByGroupNum" parameterType="Long">
+        delete from vqms_busbar_group where group_num = #{groupNum}
+    </delete>
+
+    <delete id="deleteVqmsBusbarGroupByGroupNums" parameterType="String">
+        delete from vqms_busbar_group where group_num in 
+        <foreach item="groupNum" collection="array" open="(" separator="," close=")">
+            #{groupNum}
+        </foreach>
+    </delete>
+</mapper>

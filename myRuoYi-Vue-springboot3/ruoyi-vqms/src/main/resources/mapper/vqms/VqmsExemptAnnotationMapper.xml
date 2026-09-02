@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.vqms.mapper.VqmsExemptAnnotationMapper">
+    
+    <resultMap type="VqmsExemptAnnotation" id="VqmsExemptAnnotationResult">
+        <result property="annotationId"    column="annotation_id"    />
+        <result property="entityId"    column="entity_id"    />
+        <result property="warnTimeRaw"    column="warn_time_raw"    />
+        <result property="millisecond"    column="millisecond"    />
+        <result property="objNum"    column="obj_num"    />
+        <result property="tier"    column="tier"    />
+        <result property="exemptReason"    column="exempt_reason"    />
+        <result property="evidence"    column="evidence"    />
+        <result property="reviewStatus"    column="review_status"    />
+        <result property="reviewBy"    column="review_by"    />
+        <result property="reviewTime"    column="review_time"    />
+        <result property="reviewOpinion"    column="review_opinion"    />
+        <result property="status"    column="status"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="remark"    column="remark"    />
+    </resultMap>
+
+    <sql id="selectVqmsExemptAnnotationVo">
+        select annotation_id, entity_id, warn_time_raw, millisecond, obj_num, tier, exempt_reason, evidence, review_status, review_by, review_time, review_opinion, status, create_by, create_time, update_by, update_time, remark from vqms_exempt_annotation
+    </sql>
+
+    <select id="selectVqmsExemptAnnotationList" parameterType="VqmsExemptAnnotation" resultMap="VqmsExemptAnnotationResult">
+        <include refid="selectVqmsExemptAnnotationVo"/>
+        <where>  
+            <if test="entityId != null "> and entity_id = #{entityId}</if>
+            <if test="warnTimeRaw != null  and warnTimeRaw != ''"> and warn_time_raw = #{warnTimeRaw}</if>
+            <if test="millisecond != null  and millisecond != ''"> and millisecond = #{millisecond}</if>
+            <if test="objNum != null "> and obj_num = #{objNum}</if>
+            <if test="tier != null  and tier != ''"> and tier = #{tier}</if>
+            <if test="exemptReason != null  and exemptReason != ''"> and exempt_reason = #{exemptReason}</if>
+            <if test="evidence != null  and evidence != ''"> and evidence = #{evidence}</if>
+            <if test="reviewStatus != null  and reviewStatus != ''"> and review_status = #{reviewStatus}</if>
+            <if test="reviewBy != null  and reviewBy != ''"> and review_by = #{reviewBy}</if>
+            <if test="reviewTime != null "> and review_time = #{reviewTime}</if>
+            <if test="reviewOpinion != null  and reviewOpinion != ''"> and review_opinion = #{reviewOpinion}</if>
+            <if test="status != null  and status != ''"> and status = #{status}</if>
+        </where>
+    </select>
+    
+    <select id="selectVqmsExemptAnnotationByAnnotationId" parameterType="Long" resultMap="VqmsExemptAnnotationResult">
+        <include refid="selectVqmsExemptAnnotationVo"/>
+        where annotation_id = #{annotationId}
+    </select>
+
+    <insert id="insertVqmsExemptAnnotation" parameterType="VqmsExemptAnnotation" useGeneratedKeys="true" keyProperty="annotationId">
+        insert into vqms_exempt_annotation
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="entityId != null">entity_id,</if>
+            <if test="warnTimeRaw != null and warnTimeRaw != ''">warn_time_raw,</if>
+            <if test="millisecond != null">millisecond,</if>
+            <if test="objNum != null">obj_num,</if>
+            <if test="tier != null and tier != ''">tier,</if>
+            <if test="exemptReason != null and exemptReason != ''">exempt_reason,</if>
+            <if test="evidence != null">evidence,</if>
+            <if test="reviewStatus != null and reviewStatus != ''">review_status,</if>
+            <if test="reviewBy != null">review_by,</if>
+            <if test="reviewTime != null">review_time,</if>
+            <if test="reviewOpinion != null">review_opinion,</if>
+            <if test="status != null and status != ''">status,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+            <if test="remark != null">remark,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="entityId != null">#{entityId},</if>
+            <if test="warnTimeRaw != null and warnTimeRaw != ''">#{warnTimeRaw},</if>
+            <if test="millisecond != null">#{millisecond},</if>
+            <if test="objNum != null">#{objNum},</if>
+            <if test="tier != null and tier != ''">#{tier},</if>
+            <if test="exemptReason != null and exemptReason != ''">#{exemptReason},</if>
+            <if test="evidence != null">#{evidence},</if>
+            <if test="reviewStatus != null and reviewStatus != ''">#{reviewStatus},</if>
+            <if test="reviewBy != null">#{reviewBy},</if>
+            <if test="reviewTime != null">#{reviewTime},</if>
+            <if test="reviewOpinion != null">#{reviewOpinion},</if>
+            <if test="status != null and status != ''">#{status},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+            <if test="remark != null">#{remark},</if>
+         </trim>
+    </insert>
+
+    <update id="updateVqmsExemptAnnotation" parameterType="VqmsExemptAnnotation">
+        update vqms_exempt_annotation
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="entityId != null">entity_id = #{entityId},</if>
+            <if test="warnTimeRaw != null and warnTimeRaw != ''">warn_time_raw = #{warnTimeRaw},</if>
+            <if test="millisecond != null">millisecond = #{millisecond},</if>
+            <if test="objNum != null">obj_num = #{objNum},</if>
+            <if test="tier != null and tier != ''">tier = #{tier},</if>
+            <if test="exemptReason != null and exemptReason != ''">exempt_reason = #{exemptReason},</if>
+            <if test="evidence != null">evidence = #{evidence},</if>
+            <if test="reviewStatus != null and reviewStatus != ''">review_status = #{reviewStatus},</if>
+            <if test="reviewBy != null">review_by = #{reviewBy},</if>
+            <if test="reviewTime != null">review_time = #{reviewTime},</if>
+            <if test="reviewOpinion != null">review_opinion = #{reviewOpinion},</if>
+            <if test="status != null and status != ''">status = #{status},</if>
+            <if test="createBy != null">create_by = #{createBy},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="remark != null">remark = #{remark},</if>
+        </trim>
+        where annotation_id = #{annotationId}
+    </update>
+
+    <delete id="deleteVqmsExemptAnnotationByAnnotationId" parameterType="Long">
+        delete from vqms_exempt_annotation where annotation_id = #{annotationId}
+    </delete>
+
+    <delete id="deleteVqmsExemptAnnotationByAnnotationIds" parameterType="String">
+        delete from vqms_exempt_annotation where annotation_id in 
+        <foreach item="annotationId" collection="array" open="(" separator="," close=")">
+            #{annotationId}
+        </foreach>
+    </delete>
+</mapper>

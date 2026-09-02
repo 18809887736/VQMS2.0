@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.vqms.mapper.VqmsDevicePqLimitMapper">
+    
+    <resultMap type="VqmsDevicePqLimit" id="VqmsDevicePqLimitResult">
+        <result property="id"    column="id"    />
+        <result property="deviceId"    column="device_id"    />
+        <result property="pKw"    column="p_kw"    />
+        <result property="qUpKvar"    column="q_up_kvar"    />
+        <result property="qDownKvar"    column="q_down_kvar"    />
+        <result property="effectiveFrom"    column="effective_from"    />
+        <result property="effectiveTo"    column="effective_to"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="remark"    column="remark"    />
+    </resultMap>
+
+    <sql id="selectVqmsDevicePqLimitVo">
+        select id, device_id, p_kw, q_up_kvar, q_down_kvar, effective_from, effective_to, create_time, update_time, remark from vqms_device_pq_limit
+    </sql>
+
+    <select id="selectVqmsDevicePqLimitList" parameterType="VqmsDevicePqLimit" resultMap="VqmsDevicePqLimitResult">
+        <include refid="selectVqmsDevicePqLimitVo"/>
+        <where>  
+            <if test="deviceId != null "> and device_id = #{deviceId}</if>
+            <if test="pKw != null "> and p_kw = #{pKw}</if>
+            <if test="qUpKvar != null "> and q_up_kvar = #{qUpKvar}</if>
+            <if test="qDownKvar != null "> and q_down_kvar = #{qDownKvar}</if>
+            <if test="effectiveFrom != null "> and effective_from = #{effectiveFrom}</if>
+            <if test="effectiveTo != null "> and effective_to = #{effectiveTo}</if>
+        </where>
+    </select>
+    
+    <select id="selectVqmsDevicePqLimitById" parameterType="Long" resultMap="VqmsDevicePqLimitResult">
+        <include refid="selectVqmsDevicePqLimitVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertVqmsDevicePqLimit" parameterType="VqmsDevicePqLimit" useGeneratedKeys="true" keyProperty="id">
+        insert into vqms_device_pq_limit
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="deviceId != null">device_id,</if>
+            <if test="pKw != null">p_kw,</if>
+            <if test="qUpKvar != null">q_up_kvar,</if>
+            <if test="qDownKvar != null">q_down_kvar,</if>
+            <if test="effectiveFrom != null">effective_from,</if>
+            <if test="effectiveTo != null">effective_to,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateTime != null">update_time,</if>
+            <if test="remark != null">remark,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="deviceId != null">#{deviceId},</if>
+            <if test="pKw != null">#{pKw},</if>
+            <if test="qUpKvar != null">#{qUpKvar},</if>
+            <if test="qDownKvar != null">#{qDownKvar},</if>
+            <if test="effectiveFrom != null">#{effectiveFrom},</if>
+            <if test="effectiveTo != null">#{effectiveTo},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+            <if test="remark != null">#{remark},</if>
+         </trim>
+    </insert>
+
+    <update id="updateVqmsDevicePqLimit" parameterType="VqmsDevicePqLimit">
+        update vqms_device_pq_limit
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="deviceId != null">device_id = #{deviceId},</if>
+            <if test="pKw != null">p_kw = #{pKw},</if>
+            <if test="qUpKvar != null">q_up_kvar = #{qUpKvar},</if>
+            <if test="qDownKvar != null">q_down_kvar = #{qDownKvar},</if>
+            <if test="effectiveFrom != null">effective_from = #{effectiveFrom},</if>
+            <if test="effectiveTo != null">effective_to = #{effectiveTo},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="remark != null">remark = #{remark},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteVqmsDevicePqLimitById" parameterType="Long">
+        delete from vqms_device_pq_limit where id = #{id}
+    </delete>
+
+    <delete id="deleteVqmsDevicePqLimitByIds" parameterType="String">
+        delete from vqms_device_pq_limit where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>
