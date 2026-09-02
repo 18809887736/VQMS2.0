@@ -7,6 +7,7 @@ VQMS（Voltage Quality Management System）= 基于 **RuoYi-Vue**（前后端分
 VQMS (Voltage Quality Management System) is an AVC bus-voltage quality monitoring and assessment system built on **RuoYi-Vue** (front/back-end separated edition, Spring Security + JWT + Redis).
 
 - 代码库 / Codebase：`myRuoYi-Vue-springboot3/`（若依 Spring Boot 3 版，标准 ruoyi-admin/common/framework/system/quartz/generator/ui 七模块 / standard 7-module RuoYi layout）
+- 参考项目 / Reference project：`C:\work\VQMS`（VQMS 1.0，含旧版实现、docs、sql、tools，设计迁移与口径来源 / VQMS 1.0 with the previous implementation, docs, sql and tools — the source for design migration and criteria）
 - 业务 / Business domain：对接东北能源监管局"两个细则"（2024-09-04 印发，2024-10-01 施行），重点 AVC/电压/无功考核分析 / Implements the Northeast China "Two Detailed Rules" (issued 2024-09-04, effective 2024-10-01), focused on AVC / voltage / reactive-power assessment
 - 政策原文与提炼口径 / Policy sources：`docs/政策口径/`（`_extract_2024.txt` 为 2024 版全文提取，可 grep 检索，含页码标记 / full-text extraction of the 2024 edition with page markers, grep-able）
 
