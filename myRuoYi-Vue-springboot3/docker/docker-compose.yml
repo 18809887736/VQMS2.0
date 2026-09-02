@@ -18,6 +18,9 @@ services:
       - ruoyi-mysql-data:/var/lib/mysql
       - ./mysql/conf.d:/etc/mysql/conf.d:ro
       - ./mysql/initdb:/docker-entrypoint-initdb.d:ro
+    ports:
+      # MySQL 对外发布（宿主 13306 → 容器 3306），允许远程访问
+      - "${HOST_PORT_MYSQL:-13306}:3306"
     networks: [ruoyi-net]
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p${MYSQL_ROOT_PASSWORD} --silent"]
