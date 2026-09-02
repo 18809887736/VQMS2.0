@@ -61,7 +61,12 @@ VQMS (Voltage Quality Management System) is an AVC bus-voltage quality monitorin
 
 - 实现口径一律以 **2024 版**细则为准（2020 版旧文件已从仓库移除 / always implement against the 2024 edition; the 2020-edition files were removed from the repo）
 - 仓库根 `.gitignore` 含 `*.zip` 规则，需入库的 zip 要 `git add -f` / the root `.gitignore` excludes `*.zip`; use `git add -f` for zips that must be tracked
-- `myRuoYi-Vue-springboot3` 的 7 个 ruoyi-* 模块目录设了 Windows 只读属性（attrib +R）；构建前需解除 / the 7 ruoyi-* module directories carry the Windows read-only attribute; clear it before building：
+- `myRuoYi-Vue-springboot3/ruoyi-vqms` 为 VQMS 业务开发模块（新代码的家，**不设只读**）/ `ruoyi-vqms` is the VQMS business module (active development target, never locked)
+- 若依原生 7 个模块目录（ruoyi-admin/common/framework/system/quartz/generator/ui）曾设 Windows 只读属性保护，**开发期已解除**（2026-09-02，否则 mvn 写 target/ 失败）；如需恢复保护 / the 7 stock module dirs were once read-only protected, currently unlocked for development (mvn cannot write target/ while locked); to re-lock：
   ```bash
-  cd /c/work/VQMS2.0/myRuoYi-Vue-springboot3 && for m in ruoyi-quartz ruoyi-system ruoyi-ui ruoyi-admin ruoyi-common ruoyi-framework ruoyi-generator; do (cd "$m" && MSYS_NO_PATHCONV=1 attrib -R /S /D '*') && (cd .. && MSYS_NO_PATHCONV=1 attrib -R "$m"); done
+  cd /c/work/VQMS2.0/myRuoYi-Vue-springboot3 && for m in ruoyi-quartz ruoyi-system ruoyi-ui ruoyi-admin ruoyi-common ruoyi-framework ruoyi-generator; do (cd "$m" && MSYS_NO_PATHCONV=1 attrib +R /S /D '*') && (cd .. && MSYS_NO_PATHCONV=1 attrib +R "$m"); done
+  ```
+- 本机构建 / local build：JDK 17 位于 `C:\environment\jdk-17.0.20+8`（默认 JAVA_HOME 是 8，构建需指定）/ JDK 17 at `C:\environment\jdk-17.0.20+8` (default JAVA_HOME is 8; set it explicitly)：
+  ```bash
+  cd /c/work/VQMS2.0/myRuoYi-Vue-springboot3 && JAVA_HOME='C:\environment\jdk-17.0.20+8' mvn compile -DskipTests
   ```
