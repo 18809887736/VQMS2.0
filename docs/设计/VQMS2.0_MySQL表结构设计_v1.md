@@ -90,7 +90,7 @@ create table vqms_busbar_group (
 
 create table vqms_busbar (
   busbar_num      bigint       not null                comment '主母线编号，对齐 his_curve_sv.busbar_num',
-  busbar_name     varchar(64)  not null                comment '母线名称（现场 0/1=220kV 东/西母线，2=500kV 待拍板）',
+  busbar_name     varchar(64)  not null                comment '母线名称（0/1=220kV 东/西母线，2=500kV——已拍板单档在运、按档登记，见原则10）',
   v_grade         tinyint      not null                comment '电压等级编码，同 vqms_v_grade',
   group_num       bigint       default null            comment '所属母线组（逻辑FK → vqms_busbar_group）',
   nominal_kv      decimal(10,3) not null               comment '标称电压 kV',
@@ -380,7 +380,11 @@ create table vqms_regulation_stats (
   recompute_at      datetime     default current_timestamp on update current_timestamp comment '重算批次时间（幂等覆盖）',
   primary key (id),
   unique key uk_grain_period_entity (stat_grain, stat_period, entity_id)
-) engine=innodb default charset=utf8mb4 collate=utf8mb4_0900_ai_ci comment='VQMS 调节合格率汇总（rollup 只存计数；率/罚款查询层重算：合格率=qualified/(total−invalid−exempted−undecodable 按口径)，缺额罚款=penalized 合计×容量/10⁴×0.02）';
+) engine=innodb default charset=utf8mb4 collate=utf8mb4_0900_ai_ci comment='VQMS 调节合格率汇总（rollup 只存计数；率/罚款查询层重算。分母口径分层：exempted=附件6明文豁免、剔除法天然出分母；invalid/undecodable 是否参与减法由 vqms_policy_param 当前生效选套决定（固定分母口径=不减），非固定规则；缺额罚款=penalized 合计×容量/10⁴×0.02）';
+-- 计数列分层说明（防误读）：invalid_fast/econ 按【判定状态】（QUALIFIED/PENALIZED/EXEMPTED/INVALID 四态）统计，
+--   pended_count/excluded_count 按【策略处置】（COUNT_NORMAL/EXCLUDE_REPORTED/COUNT_UNQUALIFIED/PEND_MARKED 四桶）统计——
+--   两个正交维度，同一指令可同时计入 invalid_fast 与 excluded_count（如 fast_state=INVALID 且处置=EXCLUDE_REPORTED），
+--   属有意分层非重复计数；excluded_count 仅披露、现行拍板不扣减分母。
 -- 三状态模型+剔除法在计数列上的体现：exempted 列即"免考点"，率值显示口径与罚额推导均由查询层纯函数完成
 ```
 
