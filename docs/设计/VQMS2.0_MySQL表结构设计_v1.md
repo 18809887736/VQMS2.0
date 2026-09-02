@@ -1,6 +1,6 @@
 # VQMS2.0 MySQL 表结构设计 v1
 
-> 状态：**设计稿，待 Leo 审阅拍板**（2026-09-02）
+> 状态：**设计定稿（5 项拍板全部完成，2026-09-02 Leo）——可出正式 DDL `sql/vqms.sql`**
 > 输入：① 政策口径（docs/政策口径，附件6 + 三状态模型 + 分档）② 外部数据现实（docs/外部DB + 现场库核对报告 2026-08-26）③ VQMS 1.0 成熟实现（C:\work\VQMS\sql\vqms.sql v5.0 对齐版）
 > 目标库：与 RuoYi sys_* 同库；MySQL 8；`utf8mb4_0900_ai_ci`；InnoDB；全部 `vqms_` 前缀
 
@@ -262,7 +262,7 @@ create table vqms_regulation_cmd (
 --   ③新增 decode_algorithm/response_minutes/exempt_source/exempt_ref_id 审计列
 ```
 
-### 3.9 调节免考人工标注（审计留痕，重算时应用）
+### 3.9 调节免考人工标注（两级复核：标注人≠复核人，重算时只应用 APPROVED 行）
 
 ```sql
 create table vqms_exempt_annotation (
@@ -274,6 +274,10 @@ create table vqms_exempt_annotation (
   tier           varchar(8)   not null default 'BOTH' comment '免考档：FAST/ECON/BOTH',
   exempt_reason  varchar(255) not null                comment '免考依据（附件6§三：全部闭环无功设备正确方向顶满仍不达标 等）',
   evidence       varchar(512) default null            comment '佐证材料描述（设备Q曲线截图/调度电话记录等）',
+  review_status  varchar(16)  not null default 'PENDING' comment '复核状态：PENDING=待复核 / APPROVED=已批准（生效） / REJECTED=已驳回（Leo 2026-09-02 拍板两级）',
+  review_by      varchar(64)  default null            comment '复核人（≠标注人，Service 层校验）',
+  review_time    datetime     default null            comment '复核时间',
+  review_opinion varchar(255) default null            comment '复核意见（驳回原因等）',
   status         char(1)      not null default '0'    comment '状态：0=有效, 1=撤销',
   create_by      varchar(64)  default ''              comment '标注人',
   create_time    datetime     default current_timestamp comment '标注时间',
@@ -281,8 +285,9 @@ create table vqms_exempt_annotation (
   update_time    datetime     default current_timestamp on update current_timestamp comment '更新时间',
   remark         varchar(255) default null            comment '备注',
   primary key (annotation_id),
-  key idx_cmd (warn_time_raw, obj_num)
-) engine=innodb default charset=utf8mb4 collate=utf8mb4_0900_ai_ci comment='VQMS 调节免考人工标注（yx501/设备级判定无源期间的人工路径，重算时应用）';
+  key idx_cmd (warn_time_raw, obj_num),
+  key idx_review (review_status, entity_id)
+) engine=innodb default charset=utf8mb4 collate=utf8mb4_0900_ai_ci comment='VQMS 调节免考人工标注（两级复核生效；重算只应用 APPROVED 行）';
 ```
 
 ### 3.10 AVC 退出原因标注（投运率免责输入）
@@ -455,4 +460,4 @@ create table vqms_ingest_log (
 2. ~~统计粒度合一（D2）是否接受~~ **已拍板（2026-09-02 Leo）：合一**——查询统一走统计纯函数层强制 grain 过滤，杜绝跨粒度重复统计
 3. ~~Phase 2 范围确认~~ **已拍板（2026-09-02 Leo）：等 Phase 1 跑通再建**——第 26 条电压考核/第 27 条 SVG/SVC/有偿无功三块政策口径清楚但数据源未落实（人工录入或调度侧），Phase 1 上线后按实际数据形态设计（避免 1.0 v3.x 建了又删的教训）
 4. ~~entity 容量~~ **已拍板（2026-09-02 Leo）：按 600000 kW 种入，remark 标"待现场核实"**——与监管结算口径核对后改一行数据即可
-5. **免考人工标注的审批流**：单级标注即可，还是需复核节点（标注人≠复核人）？
+5. ~~免考标注审批流~~ **已拍板（2026-09-02 Leo）：两级复核**——标注人提交 PENDING，复核人（≠标注人）APPROVED 方生效，重算只应用 APPROVED 行
