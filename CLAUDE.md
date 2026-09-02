@@ -25,6 +25,10 @@ VQMS (Voltage Quality Management System) is an AVC bus-voltage quality monitorin
 
 **换算注意 / Conversion note**：政策原文用"万千瓦/万千乏"，与规范单位差 10⁴（如 ±1 万千乏 = 10000 kvar；1.5 千伏 = 1.5 kV）/ The policy text uses 万千瓦/万千乏 (10⁴ kW / 10⁴ kvar); convert by a factor of 10⁴ against the canonical units (e.g. ±1 万千乏 = 10000 kvar).
 
+## 代码规约 / Code Conventions
+
+- **新增后端代码保存到 `myRuoYi-Vue-springboot3/ruoyi-vqms/`** / New backend code goes into the dedicated `ruoyi-vqms` Maven module（新建业务模块：根 pom.xml 声明 `<module>`，ruoyi-admin 引用依赖 / new business module: declare `<module>` in the root pom.xml and add the dependency in ruoyi-admin）
+
 ## 数据库规约 / Database Conventions
 
 - **新增数据表一律以 `vqms_` 前缀命名** / All newly created tables MUST be prefixed with `vqms_`（与若依自带 sys_/gen_/qrtz_ 等系统表区分 / to distinguish from RuoYi's built-in sys_/gen_/qrtz_ tables）
