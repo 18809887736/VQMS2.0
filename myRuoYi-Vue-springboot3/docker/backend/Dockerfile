@@ -15,6 +15,7 @@ COPY ruoyi-framework/pom.xml ruoyi-framework/
 COPY ruoyi-generator/pom.xml ruoyi-generator/
 COPY ruoyi-quartz/pom.xml ruoyi-quartz/
 COPY ruoyi-system/pom.xml ruoyi-system/
+COPY ruoyi-vqms/pom.xml ruoyi-vqms/
 RUN mvn -B -q dependency:go-offline -DskipTests || true
 
 COPY . .
