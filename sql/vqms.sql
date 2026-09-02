@@ -224,12 +224,19 @@ insert into vqms_judge_param (param_key, param_value, name, description, value_m
   ('tier_threshold_econ', 5, '经济性档分档阈值(分钟)', '附件6 政策值，锁定',                       5, 5);
 
 
--- 7、数据不可用策略参数（选套留空；甲/乙/丙/丁=同一纯函数四组配置）
+-- 7、数据不可用策略参数（原子组合·戊路线唯一实现；Leo 2026-09-02 拍板"完全按照原子性设计实现"）
+--    1.0 演进结论：甲乙丙丁四套预设已全部退役（2026-08-26 零残留），仅保留原子组合：
+--    原子 A1 解码失败（MECE 三分：A1a 编码脏写/A1b 循环码非法/A1c 缺t0电压，A1 成立短路 A2~A4）、
+--    A2 档不可判（跨档可与 A3 并存）、A3 窗口部分缺（0<completeness<1）、A4 可用度<阈值τ（依赖 A3）、
+--    A5 免考旗读取失败（阶段三独立子规则表，结论覆写三选一，不与 A1~A4 混排）；
+--    组合机制：有序规则表「表达式→动作」DSL，同层混用须一层括号、嵌套上限一层，求值首中即断、
+--    全不中兜底 COUNT_NORMAL(ruleId=NULL)；动作域沿用四桶零新增；应用校验 fail-fast（不满足整体拒绝、原策略保持）。
+--    完整定义：VQMS 1.0 docs/数据不可用处理策略.md §3.3
 drop table if exists vqms_policy_param;
 create table vqms_policy_param (
   param_id    bigint       not null auto_increment comment '主键',
-  param_key   varchar(64)  not null                comment '参数键（undecodable_mode / invalid_tier_mode / partial_missing_mode / partial_missing_threshold_pct）',
-  param_value varchar(255) default null            comment '参数值（{COUNT_NORMAL, EXCLUDE_REPORTED, COUNT_UNQUALIFIED, PEND_MARKED}；选套前整表留空）',
+  param_key   varchar(64)  not null                comment '参数键：规则行 freeform_rule_001..N（按序号有序）/ freeform_threshold_pct（A4 阈值 τ，默认 50 可整定）',
+  param_value varchar(255) default null            comment '参数值（规则行=「表达式->动作」DSL 文本；τ=整数百分比；空表=策略未配置，管线只记不判）',
   name        varchar(64)  not null                comment '参数名称',
   description varchar(255) default null            comment '说明',
   create_by   varchar(64)  default ''              comment '创建者',
@@ -238,7 +245,7 @@ create table vqms_policy_param (
   update_time datetime     default null            comment '更新时间',
   primary key (param_id),
   unique key uk_policy_key (param_key)
-) engine=innodb default charset=utf8mb4 collate=utf8mb4_0900_ai_ci comment='VQMS 数据不可用策略参数表（选套留空，零种子行）';
+) engine=innodb default charset=utf8mb4 collate=utf8mb4_0900_ai_ci comment='VQMS 数据不可用策略参数表（原子组合规则行存储；零种子=未生效）';
 
 
 -- ============================================================
@@ -289,7 +296,7 @@ create table vqms_regulation_cmd (
   undecodable_reason varchar(32)  default null            comment '解码失败归因 CYCLE_CODE_INVALID/MISSING_T0_VOLTAGE/CORRUPTED_ENCODING；NULL=成功',
   exempt_source      varchar(16)  default null            comment '免考来源：AUTO_YX(免考旗采样)/AUTO_DEVICE(设备级Q极限判定)/MANUAL(人工标注)；NULL=无免考',
   exempt_ref_id      bigint       default null            comment '免考溯源：MANUAL→vqms_exempt_annotation.annotation_id；AUTO_*→NULL（依据随行）',
-  disposition        varchar(32)  default null            comment '策略处置桶 COUNT_NORMAL/EXCLUDE_REPORTED/COUNT_UNQUALIFIED/PEND_MARKED；NULL=策略未生效（选套前只记不判）',
+  disposition        varchar(32)  default null            comment '策略处置桶 COUNT_NORMAL/EXCLUDE_REPORTED/COUNT_UNQUALIFIED/PEND_MARKED（原子组合规则表求值结果）；NULL=策略未生效（规则表未配置时只记不判）',
   hit_rule_id        varchar(8)   default null            comment '戊命中规则 ID（R001…；NULL=兜底/预设/未选套）',
   fetched_at         datetime     default current_timestamp comment '写入时间',
   obj_num_uk         bigint       generated always as (coalesce(obj_num, -1)) stored comment 'uk 键列（应用不读写）',
@@ -436,7 +443,7 @@ create table vqms_regulation_stats (
   unique key uk_grain_period_entity (stat_grain, stat_period, entity_id)
 ) engine=innodb default charset=utf8mb4 collate=utf8mb4_0900_ai_ci comment='VQMS 调节合格率汇总（rollup 只存计数）';
 -- 率/罚款由查询层纯函数重算，分母口径分层：exempted=附件6明文豁免、剔除法天然出分母；
---   invalid/undecodable 是否参与减法由 vqms_policy_param 当前生效选套决定（固定分母口径=不减），非固定规则；
+--   invalid/undecodable 是否参与减法由 vqms_policy_param 当前生效的原子组合规则表决定（固定分母口径=不减），非固定规则；
 --   缺额罚款 = penalized 合计 × 容量(kW)/10⁴ × 0.02 分/万千瓦
 -- 计数列分层（防误读）：invalid_fast/econ 按【判定状态四态】统计，pended/excluded_count 按【策略处置四桶】统计，
 --   两维正交可同计一条指令（如 fast_state=INVALID 且处置=EXCLUDE_REPORTED），有意分层非重复计数

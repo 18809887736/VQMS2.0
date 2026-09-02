@@ -185,13 +185,13 @@ create table vqms_judge_param (
 --   分档阈值 1/5 为附件6 政策值锁定。CHECK 不拦 DELETE，必需行删除由 Service 层拦。
 ```
 
-### 3.6 数据不可用策略参数（选套留空）
+### 3.6 数据不可用策略参数（原子组合·戊路线唯一实现；Leo 2026-09-02 拍板）
 
 ```sql
 create table vqms_policy_param (
   param_id    bigint       not null auto_increment comment '主键',
-  param_key   varchar(64)  not null                comment '参数键（undecodable_mode / invalid_tier_mode / partial_missing_mode / partial_missing_threshold_pct）',
-  param_value varchar(255) default null            comment '参数值（{COUNT_NORMAL, EXCLUDE_REPORTED, COUNT_UNQUALIFIED, PEND_MARKED}；选套前整表留空）',
+  param_key   varchar(64)  not null                comment '参数键：规则行 freeform_rule_001..N（按序号有序）/ freeform_threshold_pct（A4 阈值 τ，默认 50 可整定）',
+  param_value varchar(255) default null            comment '参数值（规则行=「表达式->动作」DSL 文本；τ=整数百分比；空表=策略未配置，管线只记不判）',
   name        varchar(64)  not null                comment '参数名称',
   description varchar(255) default null            comment '说明',
   create_by   varchar(64)  default ''              comment '创建者',
@@ -200,8 +200,16 @@ create table vqms_policy_param (
   update_time datetime     default null            comment '更新时间',
   primary key (param_id),
   unique key uk_policy_key (param_key)
-) engine=innodb default charset=utf8mb4 collate=utf8mb4_0900_ai_ci comment='VQMS 数据不可用策略参数表（选套留空）';
+) engine=innodb default charset=utf8mb4 collate=utf8mb4_0900_ai_ci comment='VQMS 数据不可用策略参数表（原子组合规则行存储；零种子=未生效）';
 ```
+
+**原子性设计要点**（完整定义见 VQMS 1.0 `docs/数据不可用处理策略.md` §3.3）：
+
+- **原子清单**：A1 解码失败（MECE 三分 A1a 脏写/A1b 循环码非法/A1c 缺t₀，A1 成立短路 A2~A4）、A2 档不可判（跨档可与 A3 并存）、A3 窗口部分缺（0<completeness<1）、A4 可用度<τ（依赖 A3）、A5 免考旗读取失败（阶段三**独立子规则表**，结论覆写从严/从宽/挂起，不与 A1~A4 混排）
+- **组合机制**：有序规则表「表达式→动作」DSL（同层混用须一层括号、嵌套上限一层），求值**首中即断**，全不中兜底 COUNT_NORMAL(ruleId=NULL)；动作域沿用四桶零新增；COUNT_NORMAL 仅当表达式含 A3 时可选
+- **应用校验 fail-fast**：至少一条规则/原子必须存在/动作合法且满足 A3 约束/无重复表达式——任一不满足整体拒绝，原策略保持
+- **留痕**：`disposition` 四桶 + `hit_rule_id`（规则命中=R001…，兜底=NULL）；有不可用事实却 COUNT_NORMAL 者照常归因计数，不许静默
+- **预设已退役**：甲乙丙丁四套固定候选 2026-08-26 全部退役零残留，2.0 不实现
 
 ### 3.7 AVC 指令流水账（原始事实，只增；铁律唯一例外）
 
@@ -380,7 +388,7 @@ create table vqms_regulation_stats (
   recompute_at      datetime     default current_timestamp on update current_timestamp comment '重算批次时间（幂等覆盖）',
   primary key (id),
   unique key uk_grain_period_entity (stat_grain, stat_period, entity_id)
-) engine=innodb default charset=utf8mb4 collate=utf8mb4_0900_ai_ci comment='VQMS 调节合格率汇总（rollup 只存计数；率/罚款查询层重算。分母口径分层：exempted=附件6明文豁免、剔除法天然出分母；invalid/undecodable 是否参与减法由 vqms_policy_param 当前生效选套决定（固定分母口径=不减），非固定规则；缺额罚款=penalized 合计×容量/10⁴×0.02）';
+) engine=innodb default charset=utf8mb4 collate=utf8mb4_0900_ai_ci comment='VQMS 调节合格率汇总（rollup 只存计数；率/罚款查询层重算。分母口径分层：exempted=附件6明文豁免、剔除法天然出分母；invalid/undecodable 是否参与减法由 vqms_policy_param 当前生效的原子组合规则表决定（固定分母口径=不减），非固定规则；缺额罚款=penalized 合计×容量/10⁴×0.02）';
 -- 计数列分层说明（防误读）：invalid_fast/econ 按【判定状态】（QUALIFIED/PENALIZED/EXEMPTED/INVALID 四态）统计，
 --   pended_count/excluded_count 按【策略处置】（COUNT_NORMAL/EXCLUDE_REPORTED/COUNT_UNQUALIFIED/PEND_MARKED 四桶）统计——
 --   两个正交维度，同一指令可同时计入 invalid_fast 与 excluded_count（如 fast_state=INVALID 且处置=EXCLUDE_REPORTED），
@@ -457,6 +465,7 @@ create table vqms_ingest_log (
 | D9 | regulation_cmd 修复 uk NULL 旁路（millisecond_uk 生成列入键） | 1.0 该表用原列入键，NULL 重复行可绕过幂等 |
 | D10 | collation 统一 utf8mb4_0900_ai_ci；种子剔除合成占位点号 | 1.0 改进项①④ |
 | D11 | 阈值表删 plan_sv_invalid_policy 死列 | 1.0 改进项③ |
+| D12 | 数据不可用策略完全按原子性设计实现（戊路线）：原子 A1~A5 + 有序规则表 DSL，甲乙丙丁预设不实现 | Leo 2026-09-02 拍板；1.0 已于 2026-08-26 退役四预设，2.0 一步到位 |
 
 ## 五、待 Leo 拍板
 
@@ -465,3 +474,4 @@ create table vqms_ingest_log (
 3. ~~Phase 2 范围确认~~ **已拍板（2026-09-02 Leo）：等 Phase 1 跑通再建**——第 26 条电压考核/第 27 条 SVG/SVC/有偿无功三块政策口径清楚但数据源未落实（人工录入或调度侧），Phase 1 上线后按实际数据形态设计（避免 1.0 v3.x 建了又删的教训）
 4. ~~entity 容量~~ **已拍板（2026-09-02 Leo）：按 600000 kW 种入，remark 标"待现场核实"**——与监管结算口径核对后改一行数据即可
 5. ~~免考标注审批流~~ **已拍板（2026-09-02 Leo）：两级复核**——标注人提交 PENDING，复核人（≠标注人）APPROVED 方生效，重算只应用 APPROVED 行
+6. ~~数据不可用策略实现路线~~ **已拍板（2026-09-02 Leo）：完全按原子性设计实现（D12）**——戊·原子组合唯一路线，policy_param 存 freeform_rule_NNN 规则行 + τ 阈值，甲乙丙丁预设不实现
