@@ -83,10 +83,11 @@ create table vqms_busbar_group (
   primary key (group_num)
 ) engine=innodb default charset=utf8mb4 collate=utf8mb4_0900_ai_ci comment='VQMS 母线组（主母线判定单元）';
 
--- 种子：两档各一组（拍板①：运行时单档在运，数据对上哪档统计哪档）
+-- 种子：两档各一组（拍板①：运行时单档在运，数据对上哪档统计哪档）。
+--   500kV 组兜底=2：组内唯一母线无"选哪条"歧义，指示点失效兜底零风险（评审确认 2026-09-02，修正 1.0 占位惯性）
 insert into vqms_busbar_group (group_num, entity_id, group_name, v_grade, main_indicator_yc_num, default_main_busbar_num) values
   (0, 1, '220kV母线组', 1, null, 0),
-  (1, 1, '500kV母线组', 0, null, null);
+  (1, 1, '500kV母线组', 0, null, 2);
 
 
 -- 3、主母线元数据
