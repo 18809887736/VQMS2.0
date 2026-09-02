@@ -131,7 +131,7 @@ python -m verify.run_verify --host 10.0.0.9 --port 3306 --user root \
 
 ## 关键设计
 
-- **`decode.py` 是契约级参考实现**：算法虽未定稿，但解码（目标值÷100、增量第1位方向/第3-4位×100V）稳定。生成器反向用它算 V_target，再据此排布 high/low 让数据稳定落到目标分支。
+- **`decode.py` 是契约级参考实现**：算法虽未定稿，但解码（ROT10_V1：目标值=首位轮转码{1,2,3}+余值÷10，仿 10.0.0.9 实数风格；增量第1位方向/第3-4位×100V）稳定。生成器反向用它算 V_target，再据此排布 high/low 让数据稳定落到目标分支。
 - **双写**：his_curve_sv 每分钟生成 busbar 0+1；主母线由 yc_history 指示点（默认0）决定，副母线作干扰。
 - **yc_history UNIQUE(yc_num,yc_time)**：生成器保证唯一；阶跃保持场景只在变位点写。
 - **manifest.json**：场景→期望结论，算法实现侧当测试 oracle，免手写 assert。

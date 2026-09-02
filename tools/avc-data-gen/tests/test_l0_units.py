@@ -13,7 +13,7 @@ import sys
 from datetime import datetime
 
 from src.timeutil import round_to_minute, jitter_save_time
-from src.decode import decode_target_value, decode_increment, decode_any
+from src.decode import decode_target_value, decode_increment, decode_any, encode_target_value
 
 
 def _run_all():
@@ -33,10 +33,20 @@ def _run_all():
     check("59:29 当分", round_to_minute(datetime(2026,3,15,10,59,29,0)).strftime("%H:%M"), "10:59")
     check("59:30 进位小时", round_to_minute(datetime(2026,3,15,10,59,30,0)).strftime("%H:%M"), "11:00")
 
-    print("== decode 目标值 ==")
-    check("22315→223.15", decode_target_value("收到远方遥调执行指令:主省220KV目标值,22315."), 223.15)
-    check("22500→225.0", decode_target_value("收到远方遥调执行指令:主省220KV目标值,22500."), 225.0)
+    print("== decode 目标值（ROT10_V1）==")
+    check("实数样本 12315.4→231.54", decode_target_value("收到远方遥调执行指令:220KV目标值,12315.4."), 231.54)
+    check("实数样本 12340.→234.0", decode_target_value("收到远方遥调执行指令:220KV目标值,12340."), 234.0)
+    check("12231.5→223.15（rot=1）", decode_target_value("收到远方遥调执行指令:220KV目标值,12231.5."), 223.15)
+    check("22231.5→223.15（rot=2）", decode_target_value("收到远方遥调执行指令:220KV目标值,22231.5."), 223.15)
+    check("32231.5→223.15（rot=3）", decode_target_value("收到远方遥调执行指令:220KV目标值,32231.5."), 223.15)
+    check("12250.→225.0", decode_target_value("收到远方遥调执行指令:220KV目标值,12250."), 225.0)
     check("abc 失败", decode_target_value("收到远方遥调执行指令:主省220KV目标值,abc."), None)
+    check("轮转码非法 0 失败", decode_target_value("收到远方遥调执行指令:220KV目标值,02231.5."), None)
+
+    print("== encode 目标值（ROT10_V1 反向）==")
+    check("编码 231.54→12315.4", encode_target_value(231.54, "1"), "12315.4")
+    check("编码 234.0→12340", encode_target_value(234.0, "1"), "12340")
+    check("编码 223.15 rot2→22231.5", encode_target_value(223.15, "2"), "22231.5")
 
     print("== decode 增量 ==")
     check("2202@234.25→234.45", decode_increment("收到远方遥调执行指令:辽宁母线电压增量指令编码值处理,2202.", 234.25), 234.45)
@@ -44,7 +54,7 @@ def _run_all():
     check("增量缺实时电压", decode_increment("...,2202.", None), None)
 
     print("== decode_any 自动识别 ==")
-    check("any 目标值", decode_any("...目标值,22315.", None), 223.15)
+    check("any 目标值", decode_any("...目标值,12315.4.", None), 231.54)
     check("any 增量", decode_any("...增量指令...,2202.", 234.25), 234.45)
 
     print("== jitter 取整回归 ==")
@@ -64,8 +74,8 @@ def test_round_boundaries():
     assert round_to_minute(datetime(2026,3,15,10,59,30,0)).strftime("%H:%M") == "11:00"
 
 def test_decode_target_value():
-    assert decode_target_value("...,22315.") == 223.15
-    assert decode_target_value("...,22500.") == 225.0
+    assert decode_target_value("...,12315.4.") == 231.54
+    assert decode_target_value("...,12340.") == 234.0
     assert decode_target_value("...,abc.") is None
 
 def test_decode_increment():

@@ -89,14 +89,14 @@ _MISS_ABOVE_ECON = [(226, 225)]
 # ────────────────────────── S01-S04 四档组合 ──────────────────────────
 
 class S01FastQualEconQual:
-    """快合+经合。目标值 22315→223.15kV，两窗都夹住。期望 {QUAL, QUAL}。"""
+    """快合+经合。目标值 12231.5→223.15kV，两窗都夹住。期望 {QUAL, QUAL}。"""
     id = "S01"
     def build(self, cfg):
         t0 = at_minute(cfg.base_date, hour=10, minute=0)
         curve = _win_curve(cfg, t0,
                            fast_pts=_HOLD_FAST, econ_pts=_HOLD_ECON)
         return ScenarioBundle(self.id, "快合+经合（目标值，夹住）", cfg.base_date,
-            commands=[_cmd(t0, 0, "收到远方遥调执行指令:主省220KV目标值,22315.")],
+            commands=[_cmd(t0, 0, "收到远方遥调执行指令:220KV目标值,12231.5.")],
             curve=curve, yc_points=_realtime_meta(cfg, t0), yx501_timeline=[(t0, 0)],
             expected={"fast": QUAL, "econ": QUAL, "v_target": 223.15})
 
@@ -109,7 +109,7 @@ class S02FastPenEconQual:
         curve = _win_curve(cfg, t0,
                            fast_pts=_MISS_BELOW_FAST, econ_pts=_HOLD_ECON)
         return ScenarioBundle(self.id, "快不合+经合（调得慢最终调到）", cfg.base_date,
-            commands=[_cmd(t0, 0, "收到远方遥调执行指令:主省220KV目标值,22315.")],
+            commands=[_cmd(t0, 0, "收到远方遥调执行指令:220KV目标值,12231.5.")],
             curve=curve, yc_points=_realtime_meta(cfg, t0), yx501_timeline=[(t0, 0)],
             expected={"fast": PEN, "econ": QUAL, "v_target": 223.15})
 
@@ -122,7 +122,7 @@ class S03FastQualEconPen:
         curve = _win_curve(cfg, t0,
                            fast_pts=_HOLD_FAST, econ_pts=_MISS_BELOW_ECON)
         return ScenarioBundle(self.id, "快合+经不合（短期夹住长期漂走）", cfg.base_date,
-            commands=[_cmd(t0, 0, "收到远方遥调执行指令:主省220KV目标值,22315.")],
+            commands=[_cmd(t0, 0, "收到远方遥调执行指令:220KV目标值,12231.5.")],
             curve=curve, yc_points=_realtime_meta(cfg, t0), yx501_timeline=[(t0, 0)],
             expected={"fast": QUAL, "econ": PEN, "v_target": 223.15})
 
@@ -135,7 +135,7 @@ class S04FastPenEconPen:
         curve = _win_curve(cfg, t0,
                            fast_pts=_MISS_BELOW_FAST, econ_pts=_MISS_BELOW_ECON)
         return ScenarioBundle(self.id, "两档都不合·非免考", cfg.base_date,
-            commands=[_cmd(t0, 0, "收到远方遥调执行指令:主省220KV目标值,22315.")],
+            commands=[_cmd(t0, 0, "收到远方遥调执行指令:220KV目标值,12231.5.")],
             curve=curve, yc_points=_realtime_meta(cfg, t0), yx501_timeline=[(t0, 0)],
             expected={"fast": PEN, "econ": PEN, "v_target": 223.15})
 
@@ -154,7 +154,7 @@ class S05FastExemptEconPen:
         # 阶跃在 t0+6（快速窗结束之后），保证快速窗 [1,5] 全程 yx501=1
         t_cut = t0 + timedelta(minutes=6)
         return ScenarioBundle(self.id, "两档都不合·快免考+经不免考（yx501 阶跃）", cfg.base_date,
-            commands=[_cmd(t0, 0, "收到远方遥调执行指令:主省220KV目标值,22315.")],
+            commands=[_cmd(t0, 0, "收到远方遥调执行指令:220KV目标值,12231.5.")],
             curve=curve, yc_points=_realtime_meta(cfg, t0),
             yx501_timeline=[(t0, 1), (t_cut, 0)],
             expected={"fast": EXEMPT, "econ": PEN, "v_target": 223.15})
@@ -170,7 +170,7 @@ class S06FastPenEconExempt:
                            fast_pts=_MISS_BELOW_FAST, econ_pts=_MISS_BELOW_ECON)
         t_cut = t0 + timedelta(minutes=6)   # 经济窗起始
         return ScenarioBundle(self.id, "两档都不合·快不免考+经免考（yx501 阶跃）", cfg.base_date,
-            commands=[_cmd(t0, 0, "收到远方遥调执行指令:主省220KV目标值,22315.")],
+            commands=[_cmd(t0, 0, "收到远方遥调执行指令:220KV目标值,12231.5.")],
             curve=curve, yc_points=_realtime_meta(cfg, t0),
             yx501_timeline=[(t0, 0), (t_cut, 1)],
             expected={"fast": PEN, "econ": EXEMPT, "v_target": 223.15})
@@ -184,7 +184,7 @@ class S07AllExempt:
         curve = _win_curve(cfg, t0,
                            fast_pts=_MISS_BELOW_FAST, econ_pts=_MISS_BELOW_ECON)
         return ScenarioBundle(self.id, "两档都不合·全免考（yx501 全程1）", cfg.base_date,
-            commands=[_cmd(t0, 0, "收到远方遥调执行指令:主省220KV目标值,22315.")],
+            commands=[_cmd(t0, 0, "收到远方遥调执行指令:220KV目标值,12231.5.")],
             curve=curve, yc_points=_realtime_meta(cfg, t0),
             yx501_timeline=[(t0, 1)],
             expected={"fast": EXEMPT, "econ": EXEMPT, "v_target": 223.15})
@@ -193,7 +193,7 @@ class S07AllExempt:
 # ────────────────────────── S08 偏低边界 ──────────────────────────
 
 class S08LowBoundary:
-    """偏低边界：目标值 22500→225.0kV，快速窗 L=225=V_target（测 ≤ 闭区间，边界算合格）。
+    """偏低边界：目标值 12250→225.0kV，快速窗 L=225=V_target（测 ≤ 闭区间，边界算合格）。
     fast: low 全=225 → L=225，V_target=225，L≤V_target 边界算合格。
     econ: 不夹（漂高）。期望 {QUAL, PEN}。"""
     id = "S08"
@@ -205,7 +205,7 @@ class S08LowBoundary:
         curve = _win_curve(cfg, t0,
                            fast_pts=fast, econ_pts=econ)
         return ScenarioBundle(self.id, "偏低边界（L=V_target 测≤闭区间）", cfg.base_date,
-            commands=[_cmd(t0, 0, "收到远方遥调执行指令:主省220KV目标值,22500.")],
+            commands=[_cmd(t0, 0, "收到远方遥调执行指令:220KV目标值,12250.")],
             curve=curve, yc_points=_realtime_meta(cfg, t0), yx501_timeline=[(t0, 0)],
             expected={"fast": QUAL, "econ": PEN, "v_target": 225.0})
 
@@ -296,7 +296,7 @@ class S13PartialMissingMinutes:
         curve = _win_curve(cfg, t0,
                            fast_pts=_HOLD_FAST, econ_pts=_HOLD_ECON, missing_main={3})
         return ScenarioBundle(self.id, "部分缺分钟（min3 主母线缺，不影响）", cfg.base_date,
-            commands=[_cmd(t0, 0, "收到远方遥调执行指令:主省220KV目标值,22315.")],
+            commands=[_cmd(t0, 0, "收到远方遥调执行指令:220KV目标值,12231.5.")],
             curve=curve, yc_points=_realtime_meta(cfg, t0), yx501_timeline=[(t0, 0)],
             expected={"fast": QUAL, "econ": QUAL, "v_target": 223.15})
 
@@ -310,7 +310,7 @@ class S14WholeWindowMissing:
         curve = _win_curve(cfg, t0,
                            fast_pts=_HOLD_FAST, econ_pts=_HOLD_ECON, missing_main=fast_missing)
         return ScenarioBundle(self.id, "整窗全缺（快速窗主母线全缺→该档剔除）", cfg.base_date,
-            commands=[_cmd(t0, 0, "收到远方遥调执行指令:主省220KV目标值,22315.")],
+            commands=[_cmd(t0, 0, "收到远方遥调执行指令:220KV目标值,12231.5.")],
             curve=curve, yc_points=_realtime_meta(cfg, t0), yx501_timeline=[(t0, 0)],
             expected={"fast": SKIP, "econ": QUAL, "v_target": 223.15})
 
@@ -323,7 +323,7 @@ class S15PlanSvDiscard:
         curve = _win_curve(cfg, t0,
                            fast_pts=_HOLD_FAST, econ_pts=_HOLD_ECON, plan_sv=PLAN_SV_DISCARD)
         return ScenarioBundle(self.id, "plan_SV=10245 废值干扰（算法应不读）", cfg.base_date,
-            commands=[_cmd(t0, 0, "收到远方遥调执行指令:主省220KV目标值,22315.")],
+            commands=[_cmd(t0, 0, "收到远方遥调执行指令:220KV目标值,12231.5.")],
             curve=curve, yc_points=_realtime_meta(cfg, t0), yx501_timeline=[(t0, 0)],
             expected={"fast": QUAL, "econ": QUAL, "v_target": 223.15})
 
@@ -337,7 +337,7 @@ class S16IntervalInverted:
         curve = _win_curve(cfg, t0,
                            fast_pts=inverted_fast, econ_pts=_HOLD_ECON)
         return ScenarioBundle(self.id, "区间 L>H 异常（快速窗反转→无效）", cfg.base_date,
-            commands=[_cmd(t0, 0, "收到远方遥调执行指令:主省220KV目标值,22315.")],
+            commands=[_cmd(t0, 0, "收到远方遥调执行指令:220KV目标值,12231.5.")],
             curve=curve, yc_points=_realtime_meta(cfg, t0), yx501_timeline=[(t0, 0)],
             expected={"fast": SKIP, "econ": QUAL, "v_target": 223.15})
 
@@ -353,11 +353,11 @@ class S17TwoCommandsSplit:
         t0 = at_minute(cfg.base_date, hour=10, minute=0)
         curve = _win_curve(cfg, t0,
                            fast_pts=_HOLD_FAST, econ_pts=_HOLD_ECON)
-        # obj_num=0 夹住；obj_num=1 目标更高（22500→225）不夹（H 全 224）
+        # obj_num=0 夹住；obj_num=1 目标更高（12250→225）不夹（H 全 224）
         return ScenarioBundle(self.id, "双指令分通道（obj0夹/obj1不夹）", cfg.base_date,
             commands=[
-                _cmd(t0, 0, "收到远方遥调执行指令:主省220KV目标值,22315."),
-                _cmd(t0, 1, "收到远方遥调执行指令:主省220KV目标值,22500."),
+                _cmd(t0, 0, "收到远方遥调执行指令:220KV目标值,12231.5."),
+                _cmd(t0, 1, "收到远方遥调执行指令:220KV目标值,12250."),
             ],
             curve=curve, yc_points=_realtime_meta(cfg, t0), yx501_timeline=[(t0, 0)],
             expected={"per_command": [
@@ -378,7 +378,7 @@ class S18RoundDown29:
         curve = _win_curve(cfg, t0,
                            fast_pts=_HOLD_FAST, econ_pts=_HOLD_ECON)
         return ScenarioBundle(self.id, "亚秒:29舍（warn_time 10:00:29→t0=10:00）", cfg.base_date,
-            commands=[_cmd(t0, 0, "收到远方遥调执行指令:主省220KV目标值,22315.", raw_warn_time=raw)],
+            commands=[_cmd(t0, 0, "收到远方遥调执行指令:220KV目标值,12231.5.", raw_warn_time=raw)],
             curve=curve, yc_points=_realtime_meta(cfg, t0), yx501_timeline=[(t0, 0)],
             expected={"fast": QUAL, "econ": QUAL, "v_target": 223.15, "t0_minute": "10:00"})
 
@@ -393,7 +393,7 @@ class S19RoundUp30:
         curve = _win_curve(cfg, t0,
                            fast_pts=_HOLD_FAST, econ_pts=_HOLD_ECON)
         return ScenarioBundle(self.id, "亚秒:30进（warn_time 10:00:30→t0=10:01）", cfg.base_date,
-            commands=[_cmd(t0, 0, "收到远方遥调执行指令:主省220KV目标值,22315.", raw_warn_time=raw)],
+            commands=[_cmd(t0, 0, "收到远方遥调执行指令:220KV目标值,12231.5.", raw_warn_time=raw)],
             curve=curve, yc_points=_realtime_meta(cfg, t0), yx501_timeline=[(t0, 0)],
             expected={"fast": QUAL, "econ": QUAL, "v_target": 223.15, "t0_minute": "10:01"})
 
