@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.vqms.mapper.VqmsRuntimeStatsMapper">
+
+    <resultMap type="com.ruoyi.vqms.domain.VqmsRuntimeStats" id="VqmsRuntimeStatsResult">
+        <id     property="id"              column="id"/>
+        <result property="statGrain"       column="stat_grain"/>
+        <result property="statPeriod"      column="stat_period"/>
+        <result property="entityId"        column="entity_id"/>
+        <result property="inServiceMin"    column="in_service_min"/>
+        <result property="exitGridMin"     column="exit_grid_min"/>
+        <result property="exitNonGridMin"  column="exit_nongrid_min"/>
+        <result property="offlineMin"      column="offline_min"/>
+        <result property="ratedCapacityKw" column="rated_capacity_kw"/>
+        <result property="ratePct"         column="rate_pct"/>
+        <result property="shortfallPct"    column="shortfall_pct"/>
+        <result property="penaltyScore"    column="penalty_score"/>
+        <result property="recomputeAt"     column="recompute_at"/>
+    </resultMap>
+
+    <insert id="upsertBatch">
+        insert into vqms_runtime_stats
+            (stat_grain, stat_period, entity_id, in_service_min, exit_grid_min, exit_nongrid_min,
+             offline_min, rated_capacity_kw, rate_pct, shortfall_pct, penalty_score, recompute_at)
+        values
+        <foreach collection="list" item="r" separator=",">
+            (#{r.statGrain}, #{r.statPeriod}, #{r.entityId}, #{r.inServiceMin}, #{r.exitGridMin}, #{r.exitNonGridMin},
+             #{r.offlineMin}, #{r.ratedCapacityKw}, #{r.ratePct}, #{r.shortfallPct}, #{r.penaltyScore}, sysdate())
+        </foreach>
+        on duplicate key update
+            in_service_min = values(in_service_min), exit_grid_min = values(exit_grid_min),
+            exit_nongrid_min = values(exit_nongrid_min), offline_min = values(offline_min),
+            rated_capacity_kw = values(rated_capacity_kw), rate_pct = values(rate_pct),
+            shortfall_pct = values(shortfall_pct), penalty_score = values(penalty_score),
+            recompute_at = values(recompute_at)
+    </insert>
+
+    <select id="selectByRange" resultMap="VqmsRuntimeStatsResult">
+        select id, stat_grain, stat_period, entity_id, in_service_min, exit_grid_min, exit_nongrid_min,
+               offline_min, rated_capacity_kw, rate_pct, shortfall_pct, penalty_score, recompute_at
+        from vqms_runtime_stats
+        where stat_grain = #{grain} and stat_period &gt;= #{start} and stat_period &lt;= #{end}
+        order by stat_period
+    </select>
+
+</mapper>

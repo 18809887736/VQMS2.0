@@ -28,7 +28,9 @@ def emit_background_rows(day_idx: int, day: datetime, occupied: dict, is_scenari
     """生成 day（00:00~23:59）背景三表行。
 
     occupied: {"curve": {(busbar, minute_dt)}, "cmd": {(warn_time_str, obj)},
-               "yc": {(yc_num, yc_time_str)}} —— 当日场景已写入的键，背景避让。
+               "yc": {(yc_num, minute_dt)}} —— 当日场景已写入的键，背景避让。
+    yc 占用按【分钟粒度】（场景 jitter 秒形态 .100/.237 与背景整点字符串不同，
+    字符串精确匹配拦不住背景整点补写——U02/U04 manifest 验收 2026-09-02 抓出的根因）。
     is_scenario_day: 场景日启用"保护区"——09:30~10:30 完全不写背景
     （场景的 yx501 阶跃/增量 t0 实时电压/窗口留白等语义不被背景网格点覆盖，
     manifest 验收 2026-09-02 抓出的背景-场景冲突根因）。
@@ -100,8 +102,13 @@ def emit_background_rows(day_idx: int, day: datetime, occupied: dict, is_scenari
             3009: 1,                                     # AVC 投入（背景默认投运）
             501: 0,                                      # 免考旗：未顶满
         }
+        if is_scenario_day:
+            # 阶跃保持类信号（AVC投退/退出原因/免考旗）场景日完全由场景时间线独占：
+            # 背景在变位点之间的 15 分钟补写会切开场景的保持段（U05/U06 验收 2026-09-02 抓出）
+            for step_pt in (3009, 521, 522, 501):
+                values.pop(step_pt, None)
         for yc_num, val in values.items():
-            if (yc_num, ytime) in occupied["yc"]:
+            if (yc_num, t) in occupied["yc"]:
                 continue
             yc.append({"yc_num": yc_num, "yc_time": ytime, "yc_data": val})
 

@@ -173,7 +173,8 @@ def main(argv=None) -> int:
                 for r in rows_w:
                     occ["cmd"].add((r["warn_time"], r["obj_num"]))
                 for r in rows_y:
-                    occ["yc"].add((r["yc_num"], r["yc_time"]))
+                    ydt = datetime.strptime(r["yc_time"], "%Y-%m-%d %H:%M:%S.%f")
+                    occ["yc"].add((r["yc_num"], round_to_minute(ydt)))
                 all_rows["his_curve_sv"] += rows_c
                 all_rows["warn_info"] += rows_w
                 all_rows["yc_history"] += rows_y
