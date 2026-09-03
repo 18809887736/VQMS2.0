@@ -21,6 +21,7 @@ import com.ruoyi.vqms.domain.VqmsRegulationStats;
 import com.ruoyi.vqms.domain.VqmsRuntimeStats;
 import com.ruoyi.vqms.ingestion.StatsRollupService;
 import com.ruoyi.vqms.mapper.VqmsEntityMapper;
+import com.ruoyi.vqms.mapper.VqmsRegulationCmdMapper;
 import com.ruoyi.vqms.mapper.VqmsRegulationStatsMapper;
 import com.ruoyi.vqms.mapper.VqmsRuntimeStatsMapper;
 import com.ruoyi.vqms.statistics.RegulationStatsCalculator;
@@ -41,6 +42,9 @@ public class VqmsStatsController {
 
     @Autowired
     private VqmsRuntimeStatsMapper runtimeStatsMapper;
+
+    @Autowired
+    private VqmsRegulationCmdMapper regulationCmdMapper;
 
     @Autowired
     private VqmsEntityMapper entityMapper;
@@ -94,6 +98,15 @@ public class VqmsStatsController {
         List<VqmsRuntimeStats> rows = runtimeStatsMapper.selectByRange(
                 grain, LocalDate.parse(start), LocalDate.parse(end));
         return AjaxResult.success(rows);
+    }
+
+    /** 指令级明细（看板钻取，单日全量按 cmd_time 升序）。 */
+    @PreAuthorize("@ss.hasPermi('vqms:judge:run')")
+    @GetMapping("/commands")
+    public AjaxResult commands(@RequestParam String start, @RequestParam String end) {
+        return AjaxResult.success(regulationCmdMapper.selectByRange(
+                LocalDate.parse(start).atStartOfDay(),
+                LocalDate.parse(end).atTime(23, 59)));
     }
 
     private BigDecimal capacityOf() {
