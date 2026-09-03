@@ -1,0 +1,21 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "vqms-140",
+      "runtimeExecutable": "ssh",
+      "runtimeArgs": [
+        "-i", "C:/Users/17836/.ssh/id_ed25519_140",
+        "-o", "BatchMode=yes",
+        "-o", "StrictHostKeyChecking=accept-new",
+        "-o", "ExitOnForwardFailure=yes",
+        "-o", "ServerAliveInterval=30",
+        "-N", "-L", "18080:localhost:18080",
+        "ubuntu@43.155.156.140"
+      ],
+      "url": "http://localhost:18080",
+      "port": 18080,
+      "autoPort": false
+    }
+  ]
+}
