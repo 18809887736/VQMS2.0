@@ -45,4 +45,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         order by stat_period
     </select>
 
+
+    <select id="selectMaxStatPeriod" resultType="java.time.LocalDate">
+        select max(stat_period) from vqms_runtime_stats where stat_grain = 'D'
+    </select>
 </mapper>

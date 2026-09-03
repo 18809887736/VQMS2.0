@@ -13,6 +13,7 @@ import com.ruoyi.common.annotation.Log;
 import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.common.enums.BusinessType;
 import com.ruoyi.vqms.ingestion.CommandIngestService;
+import com.ruoyi.vqms.ingestion.RecomputeLock;
 
 /**
  * 数据摄取 Controller（手动触发；Quartz 定时随统计上线再接）。
@@ -24,6 +25,9 @@ public class VqmsIngestController {
     @Autowired
     private CommandIngestService commandIngestService;
 
+    @Autowired
+    private RecomputeLock recomputeLock;
+
     /**
      * 指令摄取：抓取外部库 warn_info(type5) 入指令流水账。
      * 参数 yyyy-MM-dd，含端点。
@@ -32,7 +36,7 @@ public class VqmsIngestController {
     @Log(title = "指令摄取重算", businessType = BusinessType.UPDATE)
     @PostMapping("/commands")
     public AjaxResult ingestCommands(@RequestParam("start") String start, @RequestParam("end") String end) {
-        return AjaxResult.success(commandIngestService.ingestByDateRange(
-                LocalDate.parse(start), LocalDate.parse(end)));
+        return AjaxResult.success(recomputeLock.guard(() -> commandIngestService.ingestByDateRange(
+                LocalDate.parse(start), LocalDate.parse(end))));
     }
 }

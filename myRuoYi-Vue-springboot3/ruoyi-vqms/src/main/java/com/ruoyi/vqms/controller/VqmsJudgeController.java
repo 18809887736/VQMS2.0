@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.ruoyi.common.annotation.Log;
 import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.common.enums.BusinessType;
+import com.ruoyi.vqms.ingestion.RecomputeLock;
 import com.ruoyi.vqms.ingestion.RegulationJudgeService;
 import com.ruoyi.vqms.ingestion.RuntimePipelineService;
 
@@ -26,6 +27,9 @@ public class VqmsJudgeController {
     @Autowired
     private RuntimePipelineService runtimePipelineService;
 
+    @Autowired
+    private RecomputeLock recomputeLock;
+
     /**
      * 调节合格率判定：按日期区间（含端点）重算指令级明细（幂等 upsert）。
      */
@@ -33,8 +37,8 @@ public class VqmsJudgeController {
     @Log(title = "调节判定重算", businessType = BusinessType.UPDATE)
     @PostMapping("/regulation")
     public AjaxResult judgeRegulation(@RequestParam("start") String start, @RequestParam("end") String end) {
-        return AjaxResult.success(regulationJudgeService.judgeByDateRange(
-                java.time.LocalDate.parse(start), java.time.LocalDate.parse(end)));
+        return AjaxResult.success(recomputeLock.guard(() -> regulationJudgeService.judgeByDateRange(
+                java.time.LocalDate.parse(start), java.time.LocalDate.parse(end))));
     }
 
     /**
@@ -44,7 +48,7 @@ public class VqmsJudgeController {
     @Log(title = "投运率重算", businessType = BusinessType.UPDATE)
     @PostMapping("/runtime")
     public AjaxResult judgeRuntime(@RequestParam("start") String start, @RequestParam("end") String end) {
-        return AjaxResult.success(runtimePipelineService.runtimeByDateRange(
-                java.time.LocalDate.parse(start), java.time.LocalDate.parse(end)));
+        return AjaxResult.success(recomputeLock.guard(() -> runtimePipelineService.runtimeByDateRange(
+                java.time.LocalDate.parse(start), java.time.LocalDate.parse(end))));
     }
 }

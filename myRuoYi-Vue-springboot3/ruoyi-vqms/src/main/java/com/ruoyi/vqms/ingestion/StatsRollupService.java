@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.vqms.domain.VqmsRuntimeStats;
@@ -37,6 +38,8 @@ public class StatsRollupService {
     @Autowired
     private VqmsRuntimeStatsMapper runtimeStatsMapper;
 
+    /** 事务包裹：D→M→Y 全层原子落库，防半重算（写到一半失败时部分月/年行已落而日行残缺）。 */
+    @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> rollupByDateRange(LocalDate start, LocalDate end) {
         if (end.isBefore(start)) {
             throw new ServiceException("结束日不能早于起始日");

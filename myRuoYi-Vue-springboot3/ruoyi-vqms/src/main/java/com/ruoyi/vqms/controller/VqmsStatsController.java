@@ -21,6 +21,7 @@ import com.ruoyi.common.enums.BusinessType;
 import com.ruoyi.vqms.domain.VqmsEntity;
 import com.ruoyi.vqms.domain.VqmsRegulationStats;
 import com.ruoyi.vqms.domain.VqmsRuntimeStats;
+import com.ruoyi.vqms.ingestion.RecomputeLock;
 import com.ruoyi.vqms.ingestion.StatsRollupService;
 import com.ruoyi.vqms.mapper.VqmsEntityMapper;
 import com.ruoyi.vqms.mapper.VqmsRegulationCmdMapper;
@@ -40,6 +41,9 @@ public class VqmsStatsController {
     private StatsRollupService statsRollupService;
 
     @Autowired
+    private RecomputeLock recomputeLock;
+
+    @Autowired
     private VqmsRegulationStatsMapper regulationStatsMapper;
 
     @Autowired
@@ -56,8 +60,8 @@ public class VqmsStatsController {
     @Log(title = "汇总重算", businessType = BusinessType.UPDATE)
     @PostMapping("/rollup")
     public AjaxResult rollup(@RequestParam("start") String start, @RequestParam("end") String end) {
-        return AjaxResult.success(statsRollupService.rollupByDateRange(
-                LocalDate.parse(start), LocalDate.parse(end)));
+        return AjaxResult.success(recomputeLock.guard(() -> statsRollupService.rollupByDateRange(
+                LocalDate.parse(start), LocalDate.parse(end))));
     }
 
     /** 调节合格率报表（计数 + 率/缺额/罚分重算）。grain: D/M/Y。 */

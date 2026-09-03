@@ -11,4 +11,7 @@ public interface VqmsRuntimeStatsMapper {
     int upsertBatch(List<VqmsRuntimeStats> rows);
 
     List<VqmsRuntimeStats> selectByRange(String grain, java.time.LocalDate start, java.time.LocalDate end);
+
+    /** 已记账的最新 D 粒度日期（缺口补算起点推断）。 */
+    java.time.LocalDate selectMaxStatPeriod();
 }

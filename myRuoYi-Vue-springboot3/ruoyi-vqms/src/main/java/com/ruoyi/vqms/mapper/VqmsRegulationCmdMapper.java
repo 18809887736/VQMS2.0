@@ -16,4 +16,7 @@ public interface VqmsRegulationCmdMapper {
 
     /** 按指令原文时间取判定行（manifest 验收对账）。 */
     List<VqmsRegulationCmd> selectByRange(java.time.LocalDateTime start, java.time.LocalDateTime end);
+
+    /** 已判定的最新指令日期（缺口补算起点推断）。 */
+    java.time.LocalDate selectMaxStatDate();
 }
