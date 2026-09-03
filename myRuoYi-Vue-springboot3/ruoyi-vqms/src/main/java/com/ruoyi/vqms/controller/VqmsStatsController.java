@@ -97,6 +97,9 @@ public class VqmsStatsController {
             m.put("econPenaltyScore", rates.econ().penaltyScore());
             m.put("exemptedTotal", rates.exemptedTotal());
             m.put("penaltyTotal", rates.penaltyTotal());
+            // 罚款金额后端化（1 分 = 1000 元）：展示/导出统一由后端换算，前端不再 ×1000
+            m.put("penaltyTotalCny", rates.penaltyTotal() == null ? null
+                    : rates.penaltyTotal().multiply(BigDecimal.valueOf(1000)));
             out.add(m);
         }
         return AjaxResult.success(out);

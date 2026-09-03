@@ -20,7 +20,7 @@
         <el-col :span="4"><div class="kpi"><div class="kpi-label">经济性合格率</div><div class="kpi-value">{{ pct(summary.econRatePct) }}</div></div></el-col>
         <el-col :span="4"><div class="kpi"><div class="kpi-label">免考点数</div><div class="kpi-value">{{ summary.exemptedTotal }}</div></div></el-col>
         <el-col :span="4"><div class="kpi"><div class="kpi-label">考核罚分</div><div class="kpi-value danger">{{ score(summary.penaltyTotal) }}</div></div></el-col>
-        <el-col :span="4"><div class="kpi"><div class="kpi-label">罚款金额(元)</div><div class="kpi-value danger">{{ money(summary.penaltyTotal) }}</div></div></el-col>
+        <el-col :span="4"><div class="kpi"><div class="kpi-label">罚款金额(元)</div><div class="kpi-value danger">{{ money(summary.penaltyTotalCny) }}</div></div></el-col>
       </el-row>
       <el-row :gutter="12" class="mt8">
         <el-col :span="4"><div class="kpi"><div class="kpi-label">投运分钟</div><div class="kpi-value">{{ runtime.inServiceMin }}</div></div></el-col>
@@ -28,7 +28,7 @@
         <el-col :span="4"><div class="kpi"><div class="kpi-label">电网退出(免责)</div><div class="kpi-value">{{ runtime.exitGridMin }}</div></div></el-col>
         <el-col :span="4"><div class="kpi"><div class="kpi-label">未并网(不计)</div><div class="kpi-value">{{ runtime.offlineMin }}</div></div></el-col>
         <el-col :span="4"><div class="kpi"><div class="kpi-label">投运率</div><div class="kpi-value" :class="{'danger': runtimeBad}">{{ pct(runtime.ratePct) }}</div></div></el-col>
-        <el-col :span="4"><div class="kpi"><div class="kpi-label">投运罚款(元)</div><div class="kpi-value danger">{{ money(runtime.penaltyScore) }}</div></div></el-col>
+        <el-col :span="4"><div class="kpi"><div class="kpi-label">投运罚款(元)</div><div class="kpi-value danger">{{ money(runtime.penaltyScoreCny) }}</div></div></el-col>
       </el-row>
     </el-card>
 
@@ -95,7 +95,7 @@ export default {
       detailRows: [],
       dayRows: [],
       monthRow: null,
-      runtime: { inServiceMin: "-", exitGridMin: "-", exitNonGridMin: "-", offlineMin: "-", ratePct: null, penaltyScore: null }
+      runtime: { inServiceMin: "-", exitGridMin: "-", exitNonGridMin: "-", offlineMin: "-", ratePct: null, penaltyScore: null, penaltyScoreCny: null }
     };
   },
   computed: {
@@ -129,7 +129,7 @@ export default {
         if (rows.length > 0) {
           this.runtime = rows[0];
         } else {
-          this.runtime = { inServiceMin: "-", exitGridMin: "-", exitNonGridMin: "-", offlineMin: "-", ratePct: null, penaltyScore: null };
+          this.runtime = { inServiceMin: "-", exitGridMin: "-", exitNonGridMin: "-", offlineMin: "-", ratePct: null, penaltyScore: null, penaltyScoreCny: null };
         }
       });
     },
@@ -143,7 +143,7 @@ export default {
     },
     pct(v) { return v == null ? "—" : Number(v).toFixed(2) + "%"; },
     score(v) { return v == null ? "0.000" : Number(v).toFixed(3); },
-    money(v) { return v == null ? "—" : (Number(v) * 1000).toFixed(0); },
+    money(v) { return v == null ? "—" : Number(v).toLocaleString(); },
     stateTag(s) {
       return { QUALIFIED: "success", PENALIZED: "danger", EXEMPTED: "warning", INVALID: "info" }[s] || "info";
     },

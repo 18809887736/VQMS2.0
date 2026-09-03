@@ -47,6 +47,10 @@ public class VqmsRuntimeStats {
     public void setShortfallPct(BigDecimal shortfallPct) { this.shortfallPct = shortfallPct; }
     public BigDecimal getPenaltyScore() { return penaltyScore; }
     public void setPenaltyScore(BigDecimal penaltyScore) { this.penaltyScore = penaltyScore; }
+    /** 罚款金额（元，1 分 = 1000 元）——查询层派生列，无 DB 存储。 */
+    public BigDecimal getPenaltyScoreCny() {
+        return penaltyScore == null ? null : penaltyScore.multiply(java.math.BigDecimal.valueOf(1000));
+    }
     public LocalDateTime getRecomputeAt() { return recomputeAt; }
     public void setRecomputeAt(LocalDateTime recomputeAt) { this.recomputeAt = recomputeAt; }
 }
