@@ -55,6 +55,7 @@ public class VqmsExemptAnnotationServiceImpl implements IVqmsExemptAnnotationSer
     @Override
     public int insertVqmsExemptAnnotation(VqmsExemptAnnotation vqmsExemptAnnotation)
     {
+        vqmsExemptAnnotation.setCreateBy(SecurityUtils.getUsername());
         vqmsExemptAnnotation.setCreateTime(DateUtils.getNowDate());
         return vqmsExemptAnnotationMapper.insertVqmsExemptAnnotation(vqmsExemptAnnotation);
     }
@@ -68,6 +69,7 @@ public class VqmsExemptAnnotationServiceImpl implements IVqmsExemptAnnotationSer
     @Override
     public int updateVqmsExemptAnnotation(VqmsExemptAnnotation vqmsExemptAnnotation)
     {
+        vqmsExemptAnnotation.setUpdateBy(SecurityUtils.getUsername());
         vqmsExemptAnnotation.setUpdateTime(DateUtils.getNowDate());
         return vqmsExemptAnnotationMapper.updateVqmsExemptAnnotation(vqmsExemptAnnotation);
     }
