@@ -93,6 +93,7 @@ export default {
       detailLoading: false,
       detailDate: "",
       detailRows: [],
+      dayRows: [],
       monthRow: null,
       runtime: { inServiceMin: "-", exitGridMin: "-", exitNonGridMin: "-", offlineMin: "-", ratePct: null, penaltyScore: null }
     };
@@ -102,9 +103,6 @@ export default {
       const [y, m] = this.month.split("-").map(Number);
       const last = new Date(y, m, 0).getDate();
       return { start: `${y}-${String(m).padStart(2, "0")}-01`, end: `${y}-${String(m).padStart(2, "0")}-${String(last).padStart(2, "0")}` };
-    },
-    dayRows() {
-      return this._dayRows || [];
     },
     summary() {
       return this.monthRow || { totalCmds: "-", exemptedTotal: "-", fastRatePct: null, econRatePct: null, penaltyTotal: null };
@@ -120,7 +118,7 @@ export default {
     refresh() {
       this.loading = true;
       regulationStats("D", this.range.start, this.range.end).then(res => {
-        this._dayRows = res.data || [];
+        this.dayRows = res.data || [];
       }).finally(() => { this.loading = false; });
       regulationStats("M", this.range.start, this.range.end).then(res => {
         const rows = res.data || [];
