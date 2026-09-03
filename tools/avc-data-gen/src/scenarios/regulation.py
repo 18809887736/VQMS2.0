@@ -446,14 +446,15 @@ class S20DeviceExemptInject:
 
 class S21DeviceSlackNotExempt:
     """设备级·一台留余力 → 不免考（全部闭环设备尽力才免）。
-    GEN_01 顶满 236000；GEN_02 仅 220000（距插值极限 237500 差 17500 > 容差 2000）。
+    GEN_01 顶满 236000；GEN_02 仅 180000（距插值极限 237500 差 57500、距静态回退 200000 差 20000，
+    均超容差——曲线生效/未生效两口径都不免；回放 A6 断言 2026-09-03 抓出静态口径误免后加固）。
     yx501=0。期望 {PEN, PEN}（免考源空）。"""
     id = "S21"
     def build(self, cfg):
         t0 = at_minute(cfg.base_date, hour=10, minute=0)
         curve = _win_curve(cfg, t0, fast_pts=_MISS_BELOW_FAST, econ_pts=_MISS_BELOW_ECON,
                            outside=(222, 221))
-        dev = _device_pq(cfg, t0, 75000, 30000, 236000, 75000, 30000, 220000)
+        dev = _device_pq(cfg, t0, 75000, 30000, 236000, 75000, 30000, 180000)
         return ScenarioBundle(self.id, "设备级·一台留余力→不免考", cfg.base_date,
             commands=[_cmd(t0, 0, "收到远方遥调执行指令:220KV目标值,12231.5.")],
             curve=curve, yc_points=_realtime_meta(cfg, t0) + dev, yx501_timeline=[(t0, 0)],

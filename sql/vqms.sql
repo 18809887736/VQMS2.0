@@ -401,7 +401,7 @@ insert into vqms_reactive_device (entity_id, device_code, device_name, device_ty
 
 -- P-Q 曲线种子（300MW 机组三点插值蓝本；端点与静态额定一致，现场实测后换版）
 insert into vqms_device_pq_limit (device_id, p_kw, q_up_kvar, q_down_kvar, effective_from, remark)
-select device_id, v.p_kw, v.q_up, v.q_down, '2026-01-01', '三点插值蓝本（0/150/300MW）；现场实测换版走新 effective_from'
+select device_id, v.p_kw, v.q_up, v.q_down, '2020-01-01', '三点插值蓝本（0/150/300MW），自最早覆盖（历史回放同口径）；现场实测换版走新 effective_from'
 from vqms_reactive_device d
 join (
   select 0.000 p_kw, 250000.000 q_up, -150000.000 q_down
@@ -409,7 +409,7 @@ join (
   union all select 300000.000, 200000.000, -100000.000
 ) v
 where d.device_code in ('GEN_01', 'GEN_02')
-  and not exists (select 1 from vqms_device_pq_limit l where l.device_id = d.device_id and l.effective_from = '2026-01-01' and l.p_kw = v.p_kw);
+  and not exists (select 1 from vqms_device_pq_limit l where l.device_id = d.device_id and l.effective_from = '2020-01-01' and l.p_kw = v.p_kw);
 
 
 -- 13、P-Q 双向极限曲线（仅发电机类需要；蓝本：对端 GENERATOR_P_QLimit）
