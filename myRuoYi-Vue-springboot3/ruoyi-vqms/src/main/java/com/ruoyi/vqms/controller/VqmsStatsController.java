@@ -1,6 +1,7 @@
 package com.ruoyi.vqms.controller;
 
 import java.math.BigDecimal;
+import jakarta.servlet.http.HttpServletResponse;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -16,11 +17,15 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.ruoyi.common.annotation.Log;
+import com.ruoyi.common.core.controller.BaseController;
 import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.common.enums.BusinessType;
+import com.ruoyi.common.utils.poi.ExcelUtil;
 import com.ruoyi.vqms.domain.VqmsEntity;
 import com.ruoyi.vqms.domain.VqmsRegulationStats;
 import com.ruoyi.vqms.domain.VqmsRuntimeStats;
+import com.ruoyi.vqms.domain.vo.VqmsRegulationReportVo;
+import com.ruoyi.vqms.domain.vo.VqmsRuntimeReportVo;
 import com.ruoyi.vqms.ingestion.RecomputeLock;
 import com.ruoyi.vqms.ingestion.StatsRollupService;
 import com.ruoyi.vqms.mapper.VqmsEntityMapper;
@@ -105,6 +110,73 @@ public class VqmsStatsController {
         List<VqmsRuntimeStats> rows = runtimeStatsMapper.selectByRange(
                 grain, LocalDate.parse(start), LocalDate.parse(end));
         return AjaxResult.success(rows);
+    }
+
+    /** 投运率报表导出（Excel；率/缺额/罚款为快照随行值，罚款元 = 分 × 1000）。 */
+    @PreAuthorize("@ss.hasPermi('vqms:judge:run')")
+    @Log(title = "投运率报表导出", businessType = BusinessType.EXPORT)
+    @PostMapping("/runtime/export")
+    public void runtimeExport(HttpServletResponse response, @RequestParam String grain,
+                              @RequestParam String start, @RequestParam String end) {
+        List<VqmsRuntimeStats> rows = runtimeStatsMapper.selectByRange(
+                grain, LocalDate.parse(start), LocalDate.parse(end));
+        List<VqmsRuntimeReportVo> out = new ArrayList<>(rows.size());
+        for (VqmsRuntimeStats r : rows) {
+            out.add(new VqmsRuntimeReportVo()
+                    .statPeriod(String.valueOf(r.getStatPeriod()))
+                    .entityId(r.getEntityId())
+                    .gridMinutes(nvl(r.getInServiceMin()) + nvl(r.getExitGridMin()) + nvl(r.getExitNonGridMin()))
+                    .inServiceMin(r.getInServiceMin())
+                    .exitGridMin(r.getExitGridMin())
+                    .exitNongridMin(r.getExitNonGridMin())
+                    .ratePct(r.getRatePct())
+                    .shortfallPct(r.getShortfallPct())
+                    .penaltyScore(r.getPenaltyScore())
+                    .penaltyCny(r.getPenaltyScore() == null ? null
+                            : r.getPenaltyScore().multiply(BigDecimal.valueOf(1000))));
+        }
+        ExcelUtil<VqmsRuntimeReportVo> util = new ExcelUtil<>(VqmsRuntimeReportVo.class);
+        util.exportExcel(response, out, "投运率报表_" + grain);
+    }
+
+    /** 调节合格率报表导出（Excel；率/罚款查询层重算，与 /regulation 接口同口径）。 */
+    @PreAuthorize("@ss.hasPermi('vqms:judge:run')")
+    @Log(title = "调节报表导出", businessType = BusinessType.EXPORT)
+    @PostMapping("/regulation/export")
+    public void regulationExport(HttpServletResponse response, @RequestParam String grain,
+                                 @RequestParam String start, @RequestParam String end) {
+        List<VqmsRegulationStats> rows = regulationStatsMapper.selectByRange(
+                grain, LocalDate.parse(start), LocalDate.parse(end));
+        BigDecimal capacity = capacityOf();
+        List<VqmsRegulationReportVo> out = new ArrayList<>(rows.size());
+        for (VqmsRegulationStats r : rows) {
+            RegulationRates rates = RegulationStatsCalculator.compute(
+                    r.getTotalCmds(), r.getQualifiedFast(), r.getExemptedFast(),
+                    r.getQualifiedEcon(), r.getExemptedEcon(), capacity);
+            out.add(new VqmsRegulationReportVo()
+                    .statPeriod(String.valueOf(r.getStatPeriod()))
+                    .entityId(r.getEntityId())
+                    .totalCmds(r.getTotalCmds())
+                    .qualifiedFast(r.getQualifiedFast())
+                    .exemptedFast(r.getExemptedFast())
+                    .invalidFast(r.getInvalidFast())
+                    .fastRatePct(rates.fast().ratePct())
+                    .fastPenaltyScore(rates.fast().penaltyScore())
+                    .qualifiedEcon(r.getQualifiedEcon())
+                    .exemptedEcon(r.getExemptedEcon())
+                    .invalidEcon(r.getInvalidEcon())
+                    .econRatePct(rates.econ().ratePct())
+                    .econPenaltyScore(rates.econ().penaltyScore())
+                    .penaltyTotal(rates.penaltyTotal())
+                    .penaltyCny(rates.penaltyTotal() == null ? null
+                            : rates.penaltyTotal().multiply(BigDecimal.valueOf(1000))));
+        }
+        ExcelUtil<VqmsRegulationReportVo> util = new ExcelUtil<>(VqmsRegulationReportVo.class);
+        util.exportExcel(response, out, "调节合格率报表_" + grain);
+    }
+
+    private static int nvl(Integer v) {
+        return v == null ? 0 : v;
     }
 
     /** 指令级明细（看板钻取，单日全量按 cmd_time 升序）。 */
