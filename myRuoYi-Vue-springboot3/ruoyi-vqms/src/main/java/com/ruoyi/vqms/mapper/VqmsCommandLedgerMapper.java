@@ -13,4 +13,7 @@ public interface VqmsCommandLedgerMapper {
 
     /** 时间范围内行数（摄取校验）。 */
     long countByRange(java.time.LocalDateTime start, java.time.LocalDateTime end);
+
+    /** 时间范围内指令（判定管线输入；按 cmd_time 升序）。 */
+    List<VqmsCommandLedger> selectByRange(java.time.LocalDateTime start, java.time.LocalDateTime end);
 }

@@ -177,7 +177,7 @@ def main(argv=None) -> int:
                 all_rows["his_curve_sv"] += rows_c
                 all_rows["warn_info"] += rows_w
                 all_rows["yc_history"] += rows_y
-            bg = emit_background_rows(di, day, occ)
+            bg = emit_background_rows(di, day, occ, is_scenario_day=(di < len(ALL_SCENARIOS)))
             for k in all_rows:
                 all_rows[k] += bg[k]
 

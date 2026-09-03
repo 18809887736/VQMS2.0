@@ -351,8 +351,11 @@ class S17TwoCommandsSplit:
     id = "S17"
     def build(self, cfg):
         t0 = at_minute(cfg.base_date, hour=10, minute=0)
+        # 专用平顶带（H 恒 224）：obj0 的 223.15 夹住；obj1 的 225.0 恒高于 H 不夹。
+        # 勿复用 _HOLD_FAST（其第 3 分钟 H=225，包络 max(high)=225 会把 225.0 边界含入 → obj1 误 QUAL；
+        # manifest 验收抓出，2026-09-02 修正）
         curve = _win_curve(cfg, t0,
-                           fast_pts=_HOLD_FAST, econ_pts=_HOLD_ECON)
+                           fast_pts=[(224, 222)] * 4, econ_pts=[(224, 222)])
         # obj_num=0 夹住；obj_num=1 目标更高（12250→225）不夹（H 全 224）
         return ScenarioBundle(self.id, "双指令分通道（obj0夹/obj1不夹）", cfg.base_date,
             commands=[

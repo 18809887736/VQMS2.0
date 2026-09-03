@@ -24,17 +24,26 @@ def _h(*seeds: int, mod: int) -> int:
     return x % mod
 
 
-def emit_background_rows(day_idx: int, day: datetime, occupied: dict) -> dict[str, list[dict]]:
+def emit_background_rows(day_idx: int, day: datetime, occupied: dict, is_scenario_day: bool = False) -> dict[str, list[dict]]:
     """生成 day（00:00~23:59）背景三表行。
 
     occupied: {"curve": {(busbar, minute_dt)}, "cmd": {(warn_time_str, obj)},
                "yc": {(yc_num, yc_time_str)}} —— 当日场景已写入的键，背景避让。
+    is_scenario_day: 场景日启用"保护区"——09:30~10:30 完全不写背景
+    （场景的 yx501 阶跃/增量 t0 实时电压/窗口留白等语义不被背景网格点覆盖，
+    manifest 验收 2026-09-02 抓出的背景-场景冲突根因）。
     """
     day0 = day.replace(hour=0, minute=0, second=0, microsecond=0)
     curve, cmd, yc = [], [], []
 
+    def protected(minute: int) -> bool:
+        """场景保护区：场景日 09:30~10:29 不写任何背景（场景语义独占）。"""
+        return is_scenario_day and 570 <= minute < 630
+
     # ── his_curve_sv：分钟级双母线 ──
     for minute in range(1440):
+        if protected(minute):
+            continue
         t = day0 + timedelta(minutes=minute)
         base = 231 + (_h(day_idx, minute, 1, mod=7) - 3) // 2          # 230~231 波动基线
         high = base + (1 if _h(day_idx, minute, 2, mod=10) >= 7 else 0)  # 偶发 +1
@@ -56,6 +65,8 @@ def emit_background_rows(day_idx: int, day: datetime, occupied: dict) -> dict[st
     rot_cycle = ("1", "2", "3")
     slot = 0
     for minute in range(0, 1440, 5):
+        if protected(minute):
+            continue
         t = day0 + timedelta(minutes=minute)
         wtime = format_warn_time(t)  # :00.000 整秒形态
         if (wtime, 0) in occupied["cmd"]:
@@ -74,6 +85,8 @@ def emit_background_rows(day_idx: int, day: datetime, occupied: dict) -> dict[st
     # ── yc_history：15 分钟周期信号点 ──
     v_base = 231.0 + (_h(day_idx, 99, mod=5)) * 0.1                     # 当日电压基线 231.0~231.4
     for minute in range(0, 1440, 15):
+        if protected(minute):
+            continue
         t = day0 + timedelta(minutes=minute)
         ytime = format_yc_time(t)
         values = {

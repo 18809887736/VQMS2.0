@@ -18,4 +18,12 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         where cmd_time &gt;= #{start} and cmd_time &lt;= #{end}
     </select>
 
+    <select id="selectByRange" resultType="com.ruoyi.vqms.domain.VqmsCommandLedger">
+        select id, warn_time_raw as warnTimeRaw, cmd_time as cmdTime, millisecond, warn_type as warnType,
+               obj_num as objNum, warn_content as warnContent, fetched_at as fetchedAt
+        from vqms_command_ledger
+        where cmd_time &gt;= #{start} and cmd_time &lt;= #{end}
+        order by cmd_time
+    </select>
+
 </mapper>

@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.vqms.mapper.VqmsRegulationCmdMapper">
+
+    <resultMap type="com.ruoyi.vqms.domain.VqmsRegulationCmd" id="VqmsRegulationCmdResult">
+        <id     property="id"               column="id"/>
+        <result property="statDate"         column="stat_date"/>
+        <result property="entityId"         column="entity_id"/>
+        <result property="groupNum"         column="group_num"/>
+        <result property="warnTimeRaw"      column="warn_time_raw"/>
+        <result property="millisecond"      column="millisecond"/>
+        <result property="objNum"           column="obj_num"/>
+        <result property="cmdTime"          column="cmd_time"/>
+        <result property="algorithmId"      column="algorithm_id"/>
+        <result property="decodeAlgorithm"  column="decode_algorithm"/>
+        <result property="targetKv"         column="target_kv"/>
+        <result property="responseMinutes"  column="response_minutes"/>
+        <result property="tFastSnapshot"    column="t_fast_snapshot"/>
+        <result property="fastState"        column="fast_state"/>
+        <result property="econState"        column="econ_state"/>
+        <result property="completeness"     column="completeness"/>
+        <result property="invalidTiers"     column="invalid_tiers"/>
+        <result property="undecodableReason" column="undecodable_reason"/>
+        <result property="exemptSource"     column="exempt_source"/>
+        <result property="exemptRefId"      column="exempt_ref_id"/>
+        <result property="disposition"      column="disposition"/>
+        <result property="hitRuleId"        column="hit_rule_id"/>
+        <result property="fetchedAt"        column="fetched_at"/>
+    </resultMap>
+
+    <sql id="selectVo">
+        select id, stat_date, entity_id, group_num, warn_time_raw, millisecond, obj_num, cmd_time,
+               algorithm_id, decode_algorithm, target_kv, response_minutes, t_fast_snapshot,
+               fast_state, econ_state, completeness, invalid_tiers, undecodable_reason,
+               exempt_source, exempt_ref_id, disposition, hit_rule_id, fetched_at
+        from vqms_regulation_cmd
+    </sql>
+
+    <insert id="upsertBatch">
+        insert into vqms_regulation_cmd
+            (stat_date, entity_id, group_num, warn_time_raw, millisecond, obj_num, cmd_time,
+             algorithm_id, decode_algorithm, target_kv, response_minutes, t_fast_snapshot,
+             fast_state, econ_state, completeness, invalid_tiers, undecodable_reason,
+             exempt_source, exempt_ref_id, fetched_at)
+        values
+        <foreach collection="list" item="r" separator=",">
+            (#{r.statDate}, #{r.entityId}, #{r.groupNum}, #{r.warnTimeRaw}, #{r.millisecond}, #{r.objNum}, #{r.cmdTime},
+             #{r.algorithmId}, #{r.decodeAlgorithm}, #{r.targetKv}, #{r.responseMinutes}, #{r.tFastSnapshot},
+             #{r.fastState}, #{r.econState}, #{r.completeness}, #{r.invalidTiers}, #{r.undecodableReason},
+             #{r.exemptSource}, #{r.exemptRefId}, sysdate())
+        </foreach>
+        on duplicate key update
+            stat_date = values(stat_date), entity_id = values(entity_id), group_num = values(group_num),
+            cmd_time = values(cmd_time), algorithm_id = values(algorithm_id),
+            decode_algorithm = values(decode_algorithm), target_kv = values(target_kv),
+            response_minutes = values(response_minutes), t_fast_snapshot = values(t_fast_snapshot),
+            fast_state = values(fast_state), econ_state = values(econ_state),
+            completeness = values(completeness), invalid_tiers = values(invalid_tiers),
+            undecodable_reason = values(undecodable_reason), exempt_source = values(exempt_source),
+            exempt_ref_id = values(exempt_ref_id), fetched_at = values(fetched_at)
+    </insert>
+
+    <select id="countByRange" resultType="long">
+        select count(*) from vqms_regulation_cmd
+        where cmd_time &gt;= #{start} and cmd_time &lt;= #{end}
+    </select>
+
+    <select id="selectByRange" resultMap="VqmsRegulationCmdResult">
+        <include refid="selectVo"/>
+        where cmd_time &gt;= #{start} and cmd_time &lt;= #{end}
+        order by cmd_time
+    </select>
+
+</mapper>
