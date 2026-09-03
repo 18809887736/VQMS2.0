@@ -1,7 +1,9 @@
 package com.ruoyi.vqms.service.impl;
 
 import java.util.List;
+import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.common.utils.DateUtils;
+import com.ruoyi.common.utils.SecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.ruoyi.vqms.mapper.VqmsExemptAnnotationMapper;
@@ -92,5 +94,41 @@ public class VqmsExemptAnnotationServiceImpl implements IVqmsExemptAnnotationSer
     public int deleteVqmsExemptAnnotationByAnnotationId(Long annotationId)
     {
         return vqmsExemptAnnotationMapper.deleteVqmsExemptAnnotationByAnnotationId(annotationId);
+    }
+
+    /**
+     * 复核免考标注：仅 PENDING 可复核；复核人 ≠ 标注人（两级复核，拍板⑤）；
+     * APPROVED 后由判定重算拾取（MANUAL 免考源，优先级最高）
+     */
+    @Override
+    public int reviewVqmsExemptAnnotation(VqmsExemptAnnotation annotation)
+    {
+        String target = annotation.getReviewStatus();
+        if (!"APPROVED".equals(target) && !"REJECTED".equals(target))
+        {
+            throw new ServiceException("复核结论只能是 APPROVED 或 REJECTED");
+        }
+        VqmsExemptAnnotation row = vqmsExemptAnnotationMapper
+                .selectVqmsExemptAnnotationByAnnotationId(annotation.getAnnotationId());
+        if (row == null)
+        {
+            throw new ServiceException("标注不存在");
+        }
+        if (!"PENDING".equals(row.getReviewStatus()))
+        {
+            throw new ServiceException("仅待复核(PENDING)标注可复核，当前状态: " + row.getReviewStatus());
+        }
+        String reviewer = SecurityUtils.getUsername();
+        if (reviewer.equals(row.getCreateBy()))
+        {
+            throw new ServiceException("复核人不能与标注人相同（两级复核）");
+        }
+        VqmsExemptAnnotation upd = new VqmsExemptAnnotation();
+        upd.setAnnotationId(annotation.getAnnotationId());
+        upd.setReviewStatus(target);
+        upd.setReviewBy(reviewer);
+        upd.setReviewTime(DateUtils.getNowDate());
+        upd.setReviewOpinion(annotation.getReviewOpinion());
+        return vqmsExemptAnnotationMapper.updateVqmsExemptAnnotation(upd);
     }
 }

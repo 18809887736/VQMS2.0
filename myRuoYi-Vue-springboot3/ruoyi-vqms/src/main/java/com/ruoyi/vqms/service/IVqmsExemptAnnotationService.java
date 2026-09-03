@@ -53,9 +53,17 @@ public interface IVqmsExemptAnnotationService
 
     /**
      * 删除调节免考标注信息
-     * 
+     *
      * @param annotationId 调节免考标注主键
      * @return 结果
      */
     public int deleteVqmsExemptAnnotationByAnnotationId(Long annotationId);
+
+    /**
+     * 复核免考标注（PENDING → APPROVED/REJECTED；复核人 ≠ 标注人，两级复核）
+     *
+     * @param annotation 携带 annotationId / 目标 reviewStatus(APPROVED|REJECTED) / reviewOpinion
+     * @return 结果
+     */
+    public int reviewVqmsExemptAnnotation(VqmsExemptAnnotation annotation);
 }

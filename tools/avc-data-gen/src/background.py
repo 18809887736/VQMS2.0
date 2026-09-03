@@ -105,6 +105,12 @@ def emit_background_rows(day_idx: int, day: datetime, occupied: dict, is_scenari
             2003: 1,                                     # 远方
             3009: 1,                                     # AVC 投入（背景默认投运）
             501: 0,                                      # 免考旗：未顶满
+            # 设备级 P/Q（vqms_reactive_device：GEN_01 216/217、GEN_02 316/317）
+            # 背景永远中段运行（远离曲线极限），设备级免考判定不触发——顶满语义只由 S20+ 场景构造
+            216: 57400 + _h(day_idx, minute, 8, mod=5) * 100,   # 单机有功 ≈57.4MW（双机≈114800 对应 4004）
+            217: 20000 + _h(day_idx, minute, 9, mod=21) * 1000, # 单机无功 2~4万 kvar（极限≈24万，差一个数量级）
+            316: 57400 + _h(day_idx, minute, 10, mod=5) * 100,
+            317: 20000 + _h(day_idx, minute, 11, mod=21) * 1000,
         }
         step_owned = scenario_points or set()
         if is_scenario_day:

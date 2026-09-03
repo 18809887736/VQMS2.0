@@ -16,6 +16,12 @@ realtime_v_busbar0: 4002   # 实时母线电压 busbar0（yc_data kV 带小数�
 realtime_v_busbar1: 4003   # 实时母线电压 busbar1
 active_power: 4004         # 总有功功率（yc_data，如 114800）
 
+# 设备级遥测（vqms_reactive_device 台账 p_yc/q_yc 对应点号；p 真实候选 yc216+yc316 已考据见上）
+p_gen1: 216                # GEN_01 有功 kW
+q_gen1: 217                # GEN_01 无功 kvar
+p_gen2: 316                # GEN_02 有功 kW
+q_gen2: 317                # GEN_02 无功 kvar
+
 # JS 引擎派生点（固定建议点号，见 docs/外部DB/JS计算引擎说明.md）
 grid_signal_main: 511      # yc511 正母并网：值 = 带电(1/0)×10 + 机组数(0/1/2)；≥10 即并网
 grid_signal_aux: 512       # yc512 副母并网：同上

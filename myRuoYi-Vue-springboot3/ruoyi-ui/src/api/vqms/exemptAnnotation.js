@@ -42,3 +42,12 @@ export function delExemptAnnotation(annotationId) {
     method: 'delete'
   })
 }
+
+// 复核免考标注（批准/驳回；data: { annotationId, reviewStatus: APPROVED|REJECTED, reviewOpinion }）
+export function reviewExemptAnnotation(data) {
+  return request({
+    url: '/vqms/exemptAnnotation/review',
+    method: 'put',
+    data: data
+  })
+}

@@ -11,6 +11,8 @@
 - S11 缺实时电压跳过 / S12 解码失败跳过
 - S13 部分缺分钟 / S14 整窗全缺 / S15 plan_SV 干扰 / S16 L>H 异常
 - S17 双指令分通道 / S18 :29 舍 / S19 :30 进
+- S20-S23 设备级免考（附件6 §三：闭环无功设备正确方向顶满仍不达标）
+  免考源字段 exempt_source：AUTO_YX（S05-S07 yx501）/ AUTO_DEVICE（S20/S23 设备顶满）/ 无（不免考）
 """
 from __future__ import annotations
 
@@ -157,7 +159,7 @@ class S05FastExemptEconPen:
             commands=[_cmd(t0, 0, "收到远方遥调执行指令:220KV目标值,12231.5.")],
             curve=curve, yc_points=_realtime_meta(cfg, t0),
             yx501_timeline=[(t0, 1), (t_cut, 0)],
-            expected={"fast": EXEMPT, "econ": PEN, "v_target": 223.15})
+            expected={"fast": EXEMPT, "econ": PEN, "v_target": 223.15, "exempt_source": "AUTO_YX"})
 
 
 class S06FastPenEconExempt:
@@ -173,7 +175,7 @@ class S06FastPenEconExempt:
             commands=[_cmd(t0, 0, "收到远方遥调执行指令:220KV目标值,12231.5.")],
             curve=curve, yc_points=_realtime_meta(cfg, t0),
             yx501_timeline=[(t0, 0), (t_cut, 1)],
-            expected={"fast": PEN, "econ": EXEMPT, "v_target": 223.15})
+            expected={"fast": PEN, "econ": EXEMPT, "v_target": 223.15, "exempt_source": "AUTO_YX"})
 
 
 class S07AllExempt:
@@ -187,7 +189,7 @@ class S07AllExempt:
             commands=[_cmd(t0, 0, "收到远方遥调执行指令:220KV目标值,12231.5.")],
             curve=curve, yc_points=_realtime_meta(cfg, t0),
             yx501_timeline=[(t0, 1)],
-            expected={"fast": EXEMPT, "econ": EXEMPT, "v_target": 223.15})
+            expected={"fast": EXEMPT, "econ": EXEMPT, "v_target": 223.15, "exempt_source": "AUTO_YX"})
 
 
 # ────────────────────────── S08 偏低边界 ──────────────────────────
@@ -401,6 +403,96 @@ class S19RoundUp30:
             expected={"fast": QUAL, "econ": QUAL, "v_target": 223.15, "t0_minute": "10:01"})
 
 
+# ────────────────────────── S20-S23 设备级免考（附件6 §三）──────────────────────────
+# 台账：GEN_01 216/217、GEN_02 316/317，均 type=1 闭环；P-Q 曲线种子 (0,250k,-150k)/(150k,225k,-120k)/(300k,200k,-100k)
+# 判定采样时刻：fast @ t0+4、econ @ t0+6（floor 保持读）；免考源优先级 MANUAL > AUTO_YX > AUTO_DEVICE
+
+
+def _device_pq(cfg, t0, p1_kw, q1_mid, q1_hold, p2_kw, q2_mid, q2_hold):
+    """双机 P/Q 遥测：t0 写 P；t0+1 写中段 Q；t0+3 起顶到 hold 值并保持（t0+7 再写一次锚住窗口尾）。
+
+    判定侧 floor 保持读：t0+4/t0+6 采样时刻读到 t0+3 的 hold 值；t0+1 中段值证明"逐步顶满"的台阶。
+    """
+    p = cfg.points
+    pts = []
+    for pn, p_kw in ((p["p_gen1"], p1_kw), (p["p_gen2"], p2_kw)):
+        pts.append(YcPoint(yc_num=pn, t=t0, value=float(p_kw)))
+    for qn, mid, hold in ((p["q_gen1"], q1_mid, q1_hold), (p["q_gen2"], q2_mid, q2_hold)):
+        pts.append(YcPoint(yc_num=qn, t=t0 + timedelta(minutes=1), value=float(mid)))
+        pts.append(YcPoint(yc_num=qn, t=t0 + timedelta(minutes=3), value=float(hold)))
+        pts.append(YcPoint(yc_num=qn, t=t0 + timedelta(minutes=7), value=float(hold)))
+    return pts
+
+
+class S20DeviceExemptInject:
+    """设备级免考·电压偏低·双机顶发出曲线极限 → AUTO_DEVICE 免考。
+    目标 223.15（带 [222.15,224.15]），曲线全窗 H=222 低于带下沿 → 需 INJECT；
+    P=75MW → 曲线插值 qUp=237500，双机 Q=236000（容差 2000 内顶满），t0+3 起保持；
+    yx501=0（非 yx 免考，隔离免考源）。期望 {EXEMPT, EXEMPT, AUTO_DEVICE}。
+    注：窗外(outside)也保持越限——econ 采样时刻 t0+tEcon+1=t0+6 在窗口外，
+    若窗外回带内则方向不可判定（首版 2026-09-03 验收抓出，econ 档漏免）。"""
+    id = "S20"
+    def build(self, cfg):
+        t0 = at_minute(cfg.base_date, hour=10, minute=0)
+        curve = _win_curve(cfg, t0, fast_pts=_MISS_BELOW_FAST, econ_pts=_MISS_BELOW_ECON,
+                           outside=(222, 221))
+        dev = _device_pq(cfg, t0, 75000, 30000, 236000, 75000, 30000, 236000)
+        return ScenarioBundle(self.id, "设备免考·偏低双机顶发出极限（AUTO_DEVICE）", cfg.base_date,
+            commands=[_cmd(t0, 0, "收到远方遥调执行指令:220KV目标值,12231.5.")],
+            curve=curve, yc_points=_realtime_meta(cfg, t0) + dev, yx501_timeline=[(t0, 0)],
+            expected={"fast": EXEMPT, "econ": EXEMPT, "v_target": 223.15,
+                      "exempt_source": "AUTO_DEVICE"})
+
+
+class S21DeviceSlackNotExempt:
+    """设备级·一台留余力 → 不免考（全部闭环设备尽力才免）。
+    GEN_01 顶满 236000；GEN_02 仅 220000（距插值极限 237500 差 17500 > 容差 2000）。
+    yx501=0。期望 {PEN, PEN}（免考源空）。"""
+    id = "S21"
+    def build(self, cfg):
+        t0 = at_minute(cfg.base_date, hour=10, minute=0)
+        curve = _win_curve(cfg, t0, fast_pts=_MISS_BELOW_FAST, econ_pts=_MISS_BELOW_ECON,
+                           outside=(222, 221))
+        dev = _device_pq(cfg, t0, 75000, 30000, 236000, 75000, 30000, 220000)
+        return ScenarioBundle(self.id, "设备级·一台留余力→不免考", cfg.base_date,
+            commands=[_cmd(t0, 0, "收到远方遥调执行指令:220KV目标值,12231.5.")],
+            curve=curve, yc_points=_realtime_meta(cfg, t0) + dev, yx501_timeline=[(t0, 0)],
+            expected={"fast": PEN, "econ": PEN, "v_target": 223.15})
+
+
+class S22DeviceWrongDirection:
+    """设备级·方向错 → 不免考。电压偏低需发出，双机却在吸收（Q=-50000 远离发出极限）。
+    yx501=0。期望 {PEN, PEN}。"""
+    id = "S22"
+    def build(self, cfg):
+        t0 = at_minute(cfg.base_date, hour=10, minute=0)
+        curve = _win_curve(cfg, t0, fast_pts=_MISS_BELOW_FAST, econ_pts=_MISS_BELOW_ECON,
+                           outside=(222, 221))
+        dev = _device_pq(cfg, t0, 75000, 30000, -50000, 75000, 30000, -50000)
+        return ScenarioBundle(self.id, "设备级·方向错（偏低却吸收）→不免考", cfg.base_date,
+            commands=[_cmd(t0, 0, "收到远方遥调执行指令:220KV目标值,12231.5.")],
+            curve=curve, yc_points=_realtime_meta(cfg, t0) + dev, yx501_timeline=[(t0, 0)],
+            expected={"fast": PEN, "econ": PEN, "v_target": 223.15})
+
+
+class S23DeviceExemptAbsorb:
+    """设备级免考·电压偏高·双机顶吸收下限 → AUTO_DEVICE 免考。
+    目标 223.15，曲线全窗 L=225 高于带上沿 → 需 ABSORB；
+    P=150MW → 曲线种子点 qDown=-120000，双机 Q=-119000（容差 2000 内顶满）。
+    yx501=0。窗外保持越限（同 S20，econ 采样在窗外）。期望 {EXEMPT, EXEMPT, AUTO_DEVICE}。"""
+    id = "S23"
+    def build(self, cfg):
+        t0 = at_minute(cfg.base_date, hour=10, minute=0)
+        curve = _win_curve(cfg, t0, fast_pts=_MISS_ABOVE_FAST, econ_pts=_MISS_ABOVE_ECON,
+                           outside=(226, 225))
+        dev = _device_pq(cfg, t0, 150000, 30000, -119000, 150000, 30000, -119000)
+        return ScenarioBundle(self.id, "设备免考·偏高双机顶吸收下限（AUTO_DEVICE）", cfg.base_date,
+            commands=[_cmd(t0, 0, "收到远方遥调执行指令:220KV目标值,12231.5.")],
+            curve=curve, yc_points=_realtime_meta(cfg, t0) + dev, yx501_timeline=[(t0, 0)],
+            expected={"fast": EXEMPT, "econ": EXEMPT, "v_target": 223.15,
+                      "exempt_source": "AUTO_DEVICE"})
+
+
 # 场景注册表
 REGULATION_SCENARIOS = [
     S01FastQualEconQual(), S02FastPenEconQual(), S03FastQualEconPen(), S04FastPenEconPen(),
@@ -411,4 +503,5 @@ REGULATION_SCENARIOS = [
     S13PartialMissingMinutes(), S14WholeWindowMissing(), S15PlanSvDiscard(), S16IntervalInverted(),
     S17TwoCommandsSplit(),
     S18RoundDown29(), S19RoundUp30(),
+    S20DeviceExemptInject(), S21DeviceSlackNotExempt(), S22DeviceWrongDirection(), S23DeviceExemptAbsorb(),
 ]

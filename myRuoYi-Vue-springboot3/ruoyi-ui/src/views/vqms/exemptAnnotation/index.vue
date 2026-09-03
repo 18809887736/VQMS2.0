@@ -1,74 +1,28 @@
 <template>
   <div class="app-container">
     <el-form :model="queryParams" ref="queryForm" size="small" :inline="true" v-show="showSearch" label-width="68px">
-      <el-form-item label="考核主体" prop="entityId">
-        <el-input
-          v-model="queryParams.entityId"
-          placeholder="请输入考核主体"
-          clearable
-          @keyup.enter.native="handleQuery"
-        />
+      <el-form-item label="复核状态" prop="reviewStatus">
+        <el-select v-model="queryParams.reviewStatus" placeholder="请选择复核状态" clearable style="width: 160px">
+          <el-option v-for="(label, key) in reviewStatusMap" :key="key" :label="label" :value="key" />
+        </el-select>
       </el-form-item>
       <el-form-item label="指向指令" prop="warnTimeRaw">
         <el-input
           v-model="queryParams.warnTimeRaw"
-          placeholder="请输入指向指令"
+          placeholder="请输入指向指令时间原文"
           clearable
           @keyup.enter.native="handleQuery"
         />
       </el-form-item>
-      <el-form-item label="毫秒原文" prop="millisecond">
-        <el-input
-          v-model="queryParams.millisecond"
-          placeholder="请输入毫秒原文"
-          clearable
-          @keyup.enter.native="handleQuery"
-        />
-      </el-form-item>
-      <el-form-item label="对象编号" prop="objNum">
-        <el-input
-          v-model="queryParams.objNum"
-          placeholder="请输入对象编号"
-          clearable
-          @keyup.enter.native="handleQuery"
-        />
-      </el-form-item>
-      <el-form-item label="免考档：FAST/ECON/BOTH" prop="tier">
-        <el-input
-          v-model="queryParams.tier"
-          placeholder="请输入免考档：FAST/ECON/BOTH"
-          clearable
-          @keyup.enter.native="handleQuery"
-        />
-      </el-form-item>
-      <el-form-item label="免考依据" prop="exemptReason">
-        <el-input
-          v-model="queryParams.exemptReason"
-          placeholder="请输入免考依据"
-          clearable
-          @keyup.enter.native="handleQuery"
-        />
+      <el-form-item label="免考档" prop="tier">
+        <el-select v-model="queryParams.tier" placeholder="请选择免考档" clearable style="width: 140px">
+          <el-option v-for="t in tierOptions" :key="t.value" :label="t.label" :value="t.value" />
+        </el-select>
       </el-form-item>
       <el-form-item label="复核人" prop="reviewBy">
         <el-input
           v-model="queryParams.reviewBy"
           placeholder="请输入复核人"
-          clearable
-          @keyup.enter.native="handleQuery"
-        />
-      </el-form-item>
-      <el-form-item label="复核时间" prop="reviewTime">
-        <el-date-picker clearable
-          v-model="queryParams.reviewTime"
-          type="date"
-          value-format="yyyy-MM-dd"
-          placeholder="请选择复核时间">
-        </el-date-picker>
-      </el-form-item>
-      <el-form-item label="复核意见" prop="reviewOpinion">
-        <el-input
-          v-model="queryParams.reviewOpinion"
-          placeholder="请输入复核意见"
           clearable
           @keyup.enter.native="handleQuery"
         />
@@ -92,28 +46,6 @@
       </el-col>
       <el-col :span="1.5">
         <el-button
-          type="success"
-          plain
-          icon="el-icon-edit"
-          size="mini"
-          :disabled="single"
-          @click="handleUpdate"
-          v-hasPermi="['vqms:exemptAnnotation:edit']"
-        >修改</el-button>
-      </el-col>
-      <el-col :span="1.5">
-        <el-button
-          type="danger"
-          plain
-          icon="el-icon-delete"
-          size="mini"
-          :disabled="multiple"
-          @click="handleDelete"
-          v-hasPermi="['vqms:exemptAnnotation:remove']"
-        >删除</el-button>
-      </el-col>
-      <el-col :span="1.5">
-        <el-button
           type="warning"
           plain
           icon="el-icon-download"
@@ -126,45 +58,69 @@
     </el-row>
 
     <el-table v-loading="loading" :data="exemptAnnotationList" @selection-change="handleSelectionChange">
-      <el-table-column type="selection" width="55" align="center" />
-      <el-table-column label="主键" align="center" prop="annotationId" />
-      <el-table-column label="考核主体" align="center" prop="entityId" />
-      <el-table-column label="指向指令" align="center" prop="warnTimeRaw" />
-      <el-table-column label="毫秒原文" align="center" prop="millisecond" />
-      <el-table-column label="对象编号" align="center" prop="objNum" />
-      <el-table-column label="免考档：FAST/ECON/BOTH" align="center" prop="tier" />
-      <el-table-column label="免考依据" align="center" prop="exemptReason" />
-      <el-table-column label="佐证材料描述" align="center" prop="evidence" />
-      <el-table-column label="复核状态：PENDING=待复核 / APPROVED=已批准" align="center" prop="reviewStatus" />
-      <el-table-column label="复核人" align="center" prop="reviewBy" />
-      <el-table-column label="复核时间" align="center" prop="reviewTime" width="180">
+      <el-table-column label="主键" align="center" prop="annotationId" width="60" />
+      <el-table-column label="指向指令" align="center" prop="warnTimeRaw" width="170" />
+      <el-table-column label="毫秒原文" align="center" prop="millisecond" width="140" />
+      <el-table-column label="对象编号" align="center" prop="objNum" width="70" />
+      <el-table-column label="免考档" align="center" prop="tier" width="70">
         <template slot-scope="scope">
-          <span>{{ parseTime(scope.row.reviewTime, '{y}-{m}-{d}') }}</span>
+          <el-tag size="small">{{ scope.row.tier }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="复核意见" align="center" prop="reviewOpinion" />
-      <el-table-column label="状态：0=有效, 1=撤销" align="center" prop="status" />
-      <el-table-column label="备注" align="center" prop="remark" />
-      <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
+      <el-table-column label="免考依据" align="center" prop="exemptReason" :show-overflow-tooltip="true" />
+      <el-table-column label="复核状态" align="center" prop="reviewStatus" width="90">
+        <template slot-scope="scope">
+          <el-tag size="small" :type="reviewTagType[scope.row.reviewStatus] || 'info'">
+            {{ reviewStatusMap[scope.row.reviewStatus] || scope.row.reviewStatus }}
+          </el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column label="标注人" align="center" prop="createBy" width="90" />
+      <el-table-column label="复核人" align="center" prop="reviewBy" width="90" />
+      <el-table-column label="复核时间" align="center" prop="reviewTime" width="160">
+        <template slot-scope="scope">
+          <span>{{ parseTime(scope.row.reviewTime, '{y}-{m}-{d} {h}:{i}') }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="复核意见" align="center" prop="reviewOpinion" :show-overflow-tooltip="true" />
+      <el-table-column label="操作" align="center" class-name="small-padding fixed-width" width="260">
         <template slot-scope="scope">
           <el-button
             size="mini"
             type="text"
             icon="el-icon-edit"
+            v-if="scope.row.reviewStatus === 'PENDING'"
             @click="handleUpdate(scope.row)"
             v-hasPermi="['vqms:exemptAnnotation:edit']"
           >修改</el-button>
           <el-button
             size="mini"
             type="text"
+            icon="el-icon-check"
+            v-if="scope.row.reviewStatus === 'PENDING' && !isOwnRow(scope.row)"
+            @click="handleApprove(scope.row)"
+            v-hasPermi="['vqms:exemptAnnotation:edit']"
+          >批准</el-button>
+          <el-button
+            size="mini"
+            type="text"
+            icon="el-icon-close"
+            v-if="scope.row.reviewStatus === 'PENDING' && !isOwnRow(scope.row)"
+            @click="handleReject(scope.row)"
+            v-hasPermi="['vqms:exemptAnnotation:edit']"
+          >驳回</el-button>
+          <el-button
+            size="mini"
+            type="text"
             icon="el-icon-delete"
+            v-if="scope.row.reviewStatus === 'PENDING'"
             @click="handleDelete(scope.row)"
             v-hasPermi="['vqms:exemptAnnotation:remove']"
           >删除</el-button>
         </template>
       </el-table-column>
     </el-table>
-    
+
     <pagination
       v-show="total>0"
       :total="total"
@@ -173,71 +129,35 @@
       @pagination="getList"
     />
 
-    <!-- 添加或修改调节免考标注对话框 -->
-    <el-dialog :title="title" :visible.sync="open" width="500px" append-to-body>
+    <!-- 添加或修改调节免考标注对话框（复核字段不在此录入——批准/驳回走列表复核按钮） -->
+    <el-dialog :title="title" :visible.sync="open" width="560px" append-to-body>
       <el-form ref="form" :model="form" :rules="rules" label-width="100px">
-        <el-row>
-          <el-col :span="24">
-            <el-form-item label="考核主体" prop="entityId">
-              <el-input v-model="form.entityId" placeholder="请输入考核主体" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="24">
-            <el-form-item label="指向指令" prop="warnTimeRaw">
-              <el-input v-model="form.warnTimeRaw" placeholder="请输入指向指令" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="24">
-            <el-form-item label="毫秒原文" prop="millisecond">
-              <el-input v-model="form.millisecond" placeholder="请输入毫秒原文" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="24">
-            <el-form-item label="对象编号" prop="objNum">
-              <el-input v-model="form.objNum" placeholder="请输入对象编号" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="24">
-            <el-form-item label="免考档：FAST/ECON/BOTH" prop="tier">
-              <el-input v-model="form.tier" placeholder="请输入免考档：FAST/ECON/BOTH" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="24">
-            <el-form-item label="免考依据" prop="exemptReason">
-              <el-input v-model="form.exemptReason" placeholder="请输入免考依据" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="24">
-            <el-form-item label="佐证材料描述" prop="evidence">
-              <el-input v-model="form.evidence" type="textarea" placeholder="请输入内容" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="24">
-            <el-form-item label="复核人" prop="reviewBy">
-              <el-input v-model="form.reviewBy" placeholder="请输入复核人" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="24">
-            <el-form-item label="复核时间" prop="reviewTime">
-              <el-date-picker clearable
-                v-model="form.reviewTime"
-                type="date"
-                value-format="yyyy-MM-dd"
-                placeholder="请选择复核时间">
-              </el-date-picker>
-            </el-form-item>
-          </el-col>
-          <el-col :span="24">
-            <el-form-item label="复核意见" prop="reviewOpinion">
-              <el-input v-model="form.reviewOpinion" placeholder="请输入复核意见" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="24">
-            <el-form-item label="备注" prop="remark">
-              <el-input v-model="form.remark" placeholder="请输入备注" />
-            </el-form-item>
-          </el-col>
-        </el-row>
+        <el-form-item label="考核主体" prop="entityId">
+          <el-input-number v-model="form.entityId" :min="1" controls-position="right" />
+        </el-form-item>
+        <el-form-item label="指向指令" prop="warnTimeRaw">
+          <el-input v-model="form.warnTimeRaw" placeholder="warn_info.warn_time 原文（如 2026-04-03 10:00:00）" />
+        </el-form-item>
+        <el-form-item label="毫秒原文" prop="millisecond">
+          <el-input v-model="form.millisecond" placeholder="溯源键成分（与指令行一致）" />
+        </el-form-item>
+        <el-form-item label="对象编号" prop="objNum">
+          <el-input-number v-model="form.objNum" :min="0" controls-position="right" />
+        </el-form-item>
+        <el-form-item label="免考档" prop="tier">
+          <el-select v-model="form.tier" style="width: 200px">
+            <el-option v-for="t in tierOptions" :key="t.value" :label="t.label" :value="t.value" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="免考依据" prop="exemptReason">
+          <el-input v-model="form.exemptReason" placeholder="附件6§三：全部闭环无功设备正确方向顶满仍不达标 等" />
+        </el-form-item>
+        <el-form-item label="佐证材料" prop="evidence">
+          <el-input v-model="form.evidence" type="textarea" placeholder="设备Q曲线截图/调度电话记录等" />
+        </el-form-item>
+        <el-form-item label="备注" prop="remark">
+          <el-input v-model="form.remark" placeholder="请输入备注" />
+        </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
         <el-button type="primary" @click="submitForm">确 定</el-button>
@@ -248,7 +168,7 @@
 </template>
 
 <script>
-import { listExemptAnnotation, getExemptAnnotation, delExemptAnnotation, addExemptAnnotation, updateExemptAnnotation } from "@/api/vqms/exemptAnnotation"
+import { listExemptAnnotation, getExemptAnnotation, delExemptAnnotation, addExemptAnnotation, updateExemptAnnotation, reviewExemptAnnotation } from "@/api/vqms/exemptAnnotation"
 
 export default {
   name: "ExemptAnnotation",
@@ -258,10 +178,6 @@ export default {
       loading: true,
       // 选中数组
       ids: [],
-      // 非单个禁用
-      single: true,
-      // 非多个禁用
-      multiple: true,
       // 显示搜索条件
       showSearch: true,
       // 总条数
@@ -272,22 +188,22 @@ export default {
       title: "",
       // 是否显示弹出层
       open: false,
+      // 复核状态映射
+      reviewStatusMap: { PENDING: "待复核", APPROVED: "已批准", REJECTED: "已驳回" },
+      reviewTagType: { PENDING: "warning", APPROVED: "success", REJECTED: "danger" },
+      tierOptions: [
+        { value: "FAST", label: "FAST 快速性档" },
+        { value: "ECON", label: "ECON 经济性档" },
+        { value: "BOTH", label: "BOTH 两档" }
+      ],
       // 查询参数
       queryParams: {
         pageNum: 1,
         pageSize: 10,
-        entityId: null,
-        warnTimeRaw: null,
-        millisecond: null,
-        objNum: null,
-        tier: null,
-        exemptReason: null,
-        evidence: null,
         reviewStatus: null,
-        reviewBy: null,
-        reviewTime: null,
-        reviewOpinion: null,
-        status: null,
+        warnTimeRaw: null,
+        tier: null,
+        reviewBy: null
       },
       // 表单参数
       form: {},
@@ -300,18 +216,17 @@ export default {
           { required: true, message: "指向指令不能为空", trigger: "blur" }
         ],
         tier: [
-          { required: true, message: "免考档：FAST/ECON/BOTH不能为空", trigger: "blur" }
+          { required: true, message: "免考档不能为空", trigger: "change" }
         ],
         exemptReason: [
           { required: true, message: "免考依据不能为空", trigger: "blur" }
-        ],
-        reviewStatus: [
-          { required: true, message: "复核状态：PENDING=待复核 / APPROVED=已批准不能为空", trigger: "change" }
-        ],
-        status: [
-          { required: true, message: "状态：0=有效, 1=撤销不能为空", trigger: "change" }
-        ],
+        ]
       }
+    }
+  },
+  computed: {
+    currentUser() {
+      return this.$store.state.user.name
     }
   },
   created() {
@@ -327,31 +242,26 @@ export default {
         this.loading = false
       })
     },
+    // 两级复核：标注人不能复核自己的标注
+    isOwnRow(row) {
+      return row.createBy === this.currentUser
+    },
     // 取消按钮
     cancel() {
       this.open = false
       this.reset()
     },
-    // 表单重置
+    // 表单重置（review_status/status 走库默认：PENDING / 0）
     reset() {
       this.form = {
         annotationId: null,
-        entityId: null,
+        entityId: 1,
         warnTimeRaw: null,
         millisecond: null,
-        objNum: null,
-        tier: null,
+        objNum: 0,
+        tier: "BOTH",
         exemptReason: null,
         evidence: null,
-        reviewStatus: null,
-        reviewBy: null,
-        reviewTime: null,
-        reviewOpinion: null,
-        status: null,
-        createBy: null,
-        createTime: null,
-        updateBy: null,
-        updateTime: null,
         remark: null
       }
       this.resetForm("form")
@@ -369,8 +279,6 @@ export default {
     // 多选框选中数据
     handleSelectionChange(selection) {
       this.ids = selection.map(item => item.annotationId)
-      this.single = selection.length !== 1
-      this.multiple = !selection.length
     },
     /** 新增按钮操作 */
     handleAdd() {
@@ -378,7 +286,7 @@ export default {
       this.open = true
       this.title = "添加调节免考标注"
     },
-    /** 修改按钮操作 */
+    /** 修改按钮操作（仅待复核可改） */
     handleUpdate(row) {
       this.reset()
       const annotationId = row.annotationId || this.ids
@@ -400,13 +308,36 @@ export default {
             })
           } else {
             addExemptAnnotation(this.form).then(response => {
-              this.$modal.msgSuccess("新增成功")
+              this.$modal.msgSuccess("新增成功（待复核）")
               this.open = false
               this.getList()
             })
           }
         }
       })
+    },
+    /** 批准（生效需重算判定） */
+    handleApprove(row) {
+      this.$modal.confirm('确认批准标注 #' + row.annotationId + ' 免考（' + row.tier + '档）？批准后需重算判定生效。').then(() => {
+        return reviewExemptAnnotation({ annotationId: row.annotationId, reviewStatus: "APPROVED" })
+      }).then(() => {
+        this.getList()
+        this.$modal.msgSuccess("已批准；重算判定后按 MANUAL 免考生效")
+      }).catch(() => {})
+    },
+    /** 驳回（必填意见） */
+    handleReject(row) {
+      this.$prompt('请输入驳回原因（必填）', '驳回标注 #' + row.annotationId, {
+        confirmButtonText: '确定驳回',
+        cancelButtonText: '取消',
+        inputType: 'textarea',
+        inputValidator: v => (v && v.trim().length > 0) || '驳回原因不能为空'
+      }).then(({ value }) => {
+        return reviewExemptAnnotation({ annotationId: row.annotationId, reviewStatus: "REJECTED", reviewOpinion: value })
+      }).then(() => {
+        this.getList()
+        this.$modal.msgSuccess("已驳回")
+      }).catch(() => {})
     },
     /** 删除按钮操作 */
     handleDelete(row) {

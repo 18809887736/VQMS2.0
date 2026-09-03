@@ -92,6 +92,18 @@ public class VqmsExemptAnnotationController extends BaseController
     }
 
     /**
+     * 复核免考标注（批准/驳回；复核人≠标注人，仅 PENDING 可复核；APPROVED 后重算判定生效）
+     * body: { annotationId, reviewStatus: APPROVED|REJECTED, reviewOpinion }
+     */
+    @PreAuthorize("@ss.hasPermi('vqms:exemptAnnotation:edit')")
+    @Log(title = "调节免考标注-复核", businessType = BusinessType.UPDATE)
+    @PutMapping("/review")
+    public AjaxResult review(@RequestBody VqmsExemptAnnotation vqmsExemptAnnotation)
+    {
+        return toAjax(vqmsExemptAnnotationService.reviewVqmsExemptAnnotation(vqmsExemptAnnotation));
+    }
+
+    /**
      * 删除调节免考标注
      */
     @PreAuthorize("@ss.hasPermi('vqms:exemptAnnotation:remove')")

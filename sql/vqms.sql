@@ -221,7 +221,8 @@ insert into vqms_judge_param (param_key, param_value, name, description, value_m
   ('t_fast',              4, '快速性档窗口(分钟)',     '快速性档扫描窗口 [1, t_fast]，整数可整定', 1, 4),
   ('t_econ',              5, '经济性档窗口上限(分钟)', '写死=5（指令 5 分钟间隔），锁定不可改',    5, 5),
   ('tier_threshold_fast', 1, '快速性档分档阈值(分钟)', '附件6 政策值，锁定',                       1, 1),
-  ('tier_threshold_econ', 5, '经济性档分档阈值(分钟)', '附件6 政策值，锁定',                       5, 5);
+  ('tier_threshold_econ', 5, '经济性档分档阈值(分钟)', '附件6 政策值，锁定',                       5, 5),
+  ('exempt_q_tol_kvar', 2000, '设备级免考顶满容差(kvar)', '设备Q距极限≤该值视为顶满（附件6§三无ε规定，现场整定）', 0, 100000);
 
 
 -- 7、数据不可用策略参数（原子组合·戊路线唯一实现；Leo 2026-09-02 拍板"完全按照原子性设计实现"）
@@ -391,6 +392,18 @@ create table vqms_reactive_device (
 insert into vqms_reactive_device (entity_id, device_code, device_name, device_type, rated_q_up_kvar, rated_q_down_kvar, q_yc_num, p_yc_num, remark) values
   (1, 'GEN_01', '1号发电机组', 1, 200000.000, -100000.000, 217, 216, '额定值来自对端 GENERATOR 静态列；随P变化的精确极限待录 vqms_device_pq_limit'),
   (1, 'GEN_02', '2号发电机组', 1, 200000.000, -100000.000, 317, 316, '同 1号机');
+
+-- P-Q 曲线种子（300MW 机组三点插值蓝本；端点与静态额定一致，现场实测后换版）
+insert into vqms_device_pq_limit (device_id, p_kw, q_up_kvar, q_down_kvar, effective_from, remark)
+select device_id, v.p_kw, v.q_up, v.q_down, '2026-01-01', '三点插值蓝本（0/150/300MW）；现场实测换版走新 effective_from'
+from vqms_reactive_device d
+join (
+  select 0.000 p_kw, 250000.000 q_up, -150000.000 q_down
+  union all select 150000.000, 225000.000, -120000.000
+  union all select 300000.000, 200000.000, -100000.000
+) v
+where d.device_code in ('GEN_01', 'GEN_02')
+  and not exists (select 1 from vqms_device_pq_limit l where l.device_id = d.device_id and l.effective_from = '2026-01-01' and l.p_kw = v.p_kw);
 
 
 -- 13、P-Q 双向极限曲线（仅发电机类需要；蓝本：对端 GENERATOR_P_QLimit）
