@@ -107,8 +107,9 @@ public class RegulationJudgeService {
     @Autowired
     private VqmsPointConfig pointConfig;
 
-    /** 逐日免考判定装配上下文（主体 + 设备台账 + 当日生效 P-Q 曲线 + 当日设备遥测 + 已批标注）。 */
-    private record DayContext(long entityId, BigDecimal qTol, List<VqmsReactiveDevice> loopDevices,
+    /** 逐日免考判定装配上下文（主体 + 设备台账 + 当日生效 P-Q 曲线 + 当日设备遥测 + 已批标注 + 完整度闸门）。 */
+    private record DayContext(long entityId, BigDecimal qTol, BigDecimal minCompleteness,
+                              List<VqmsReactiveDevice> loopDevices,
                               Map<Long, List<PqPoint>> curves,
                               Map<Long, TreeMap<LocalDateTime, Double>> deviceYc,
                               Map<String, VqmsExemptAnnotation> approved) {
@@ -125,14 +126,17 @@ public class RegulationJudgeService {
         Long exemptFlagPt = pointConfig.optional(pointConfig.loadGatePoints(),
                 VqmsPointConfig.EXEMPT_FLAG, "AUTO_YX 免考链停用，免考走 MANUAL/AUTO_DEVICE");
         BigDecimal qTol = resolveQTol();
+        BigDecimal minCompleteness = resolveMinCompleteness();
         List<VqmsReactiveDevice> loopDevices = loadLoopDevices();
         Map<Long, List<VqmsDevicePqLimit>> pqRows = loadPqRows(loopDevices);
         Map<String, VqmsExemptAnnotation> approved = loadApprovedAnnotations();
-        log.info("判定开始 {}~{} 主体={} tFast={} 主母线={} 实时点={} 免考旗={} qTol={} 闭环设备={} 曲线版点数={} 已批标注={}",
+        log.info("判定开始 {}~{} 主体={} tFast={} 主母线={} 实时点={} 免考旗={} qTol={} 完整度闸门τ={} 闭环设备={} 曲线版点数={} 已批标注={}",
                 start, end, entityId, tFast, mainBusbar,
                 realtimePoint == null ? "未整定" : realtimePoint,
                 exemptFlagPt == null ? "未整定" : exemptFlagPt,
-                qTol.toPlainString(), loopDevices.size(),
+                qTol.toPlainString(),
+                minCompleteness == null ? "关闭" : minCompleteness.toPlainString(),
+                loopDevices.size(),
                 pqRows.values().stream().mapToInt(List::size).sum(), approved.size());
 
         Map<String, Long> counts = new HashMap<>();
@@ -150,12 +154,12 @@ public class RegulationJudgeService {
             if (cmds.isEmpty()) {
                 continue;
             }
-            Map<LocalDateTime, Band> curve = loadCurve(mainBusbar, dayStart, dayEnd);
+            Map<LocalDateTime, Band> curve = loadCurve(mainBusbar, dayStart, dayEnd).bands();
             TreeMap<LocalDateTime, Double> exemptFlag = exemptFlagPt == null
                     ? new TreeMap<>() : loadYc(exemptFlagPt, dayStart, dayEnd);
             TreeMap<LocalDateTime, Double> realtime = realtimePoint == null
                     ? new TreeMap<>() : loadYc(realtimePoint, dayStart, dayEnd);
-            DayContext ctx = new DayContext(entityId, qTol, loopDevices,
+            DayContext ctx = new DayContext(entityId, qTol, minCompleteness, loopDevices,
                     resolveCurves(pqRows, d), loadDeviceYc(loopDevices, dayStart, dayEnd), approved);
 
             for (VqmsCommandLedger cmd : cmds) {
@@ -187,7 +191,8 @@ public class RegulationJudgeService {
         BigDecimal targetKv = VTargetDecoder.decodeAny(cmd.getWarnContent(), rtKv);
 
         // 原始判定不进免考旗：三源免考链在编排层逐档套用（PEN → EXEMPTED 的翻转规则与纯函数一致）
-        Outcome o = RegulationJudge.judge(targetKv, curve, t0, tFast, T_ECON, false, false);
+        Outcome o = RegulationJudge.judge(targetKv, curve, t0, tFast, T_ECON, false, false,
+                ctx.minCompleteness());
         String fastState = o.fastState();
         String econState = o.econState();
         String srcFast = null;
@@ -411,10 +416,15 @@ public class RegulationJudgeService {
         return null;
     }
 
-    private Map<LocalDateTime, Band> loadCurve(long busbarNum, LocalDateTime dayStart, LocalDateTime dayEnd) {
+    /** 曲线装载结果：bands 供判定；dirtyRows = 0 值坏点拦截数（发现④，数据公平性审计留痕）。 */
+    private record CurveLoad(Map<LocalDateTime, Band> bands, long dirtyRows) {
+    }
+
+    private CurveLoad loadCurve(long busbarNum, LocalDateTime dayStart, LocalDateTime dayEnd) {
         List<HisCurveSvRow> rows = sourceReader.fetchCurve(List.of(busbarNum),
                 dayStart.minusMinutes(2), dayEnd.plusMinutes(7));
         Map<LocalDateTime, Band> m = new HashMap<>(rows.size() * 2);
+        long dirty = 0;
         for (HisCurveSvRow r : rows) {
             if (r.busbarNum() != busbarNum) {
                 continue;
@@ -423,10 +433,17 @@ public class RegulationJudgeService {
             if (minute == null || r.lowSv() == null || r.highSv() == null) {
                 continue;
             }
-            boolean valid = r.lowSv().compareTo(r.highSv()) <= 0;
-            m.put(minute, new Band(r.lowSv(), r.highSv(), valid));
+            Band b = RegulationJudge.sanitizeBand(r.lowSv(), r.highSv());
+            if (b == null) {
+                dirty++;
+                continue;
+            }
+            m.put(minute, b);
         }
-        return m;
+        if (dirty > 0) {
+            log.warn("数据质量闸门 {}: 拦截 0 值坏点 {} 行（不采信，等同缺数；现场库核对报告发现④）", busbarNum, dirty);
+        }
+        return new CurveLoad(m, dirty);
     }
 
     private TreeMap<LocalDateTime, Double> loadYc(long point, LocalDateTime dayStart, LocalDateTime dayEnd) {
@@ -483,6 +500,19 @@ public class RegulationJudgeService {
             return BigDecimal.valueOf(list.get(0).getParamValue());
         }
         return BigDecimal.ZERO;
+    }
+
+    /** 完整度闸门 τ（0~100%，0=关闭；1.0 数据不可用策略 A3/A4 最小口径，运行方可整定）。 */
+    private BigDecimal resolveMinCompleteness() {
+        VqmsJudgeParam q = new VqmsJudgeParam();
+        q.setParamKey("min_window_completeness_pct");
+        List<VqmsJudgeParam> list = judgeParamMapper.selectVqmsJudgeParamList(q);
+        if (list != null && !list.isEmpty() && list.get(0).getParamValue() != null) {
+            return list.get(0).getParamValue() == 0 ? null
+                    : BigDecimal.valueOf(list.get(0).getParamValue()).divide(BigDecimal.valueOf(100), 4,
+                            java.math.RoundingMode.HALF_UP);
+        }
+        return null;
     }
 
     private long resolveMainBusbar() {

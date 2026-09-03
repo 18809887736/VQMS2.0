@@ -227,7 +227,8 @@ insert into vqms_judge_param (param_key, param_value, name, description, value_m
   ('t_econ',              5, '经济性档窗口上限(分钟)', '写死=5（指令 5 分钟间隔），锁定不可改',    5, 5),
   ('tier_threshold_fast', 1, '快速性档分档阈值(分钟)', '附件6 政策值，锁定',                       1, 1),
   ('tier_threshold_econ', 5, '经济性档分档阈值(分钟)', '附件6 政策值，锁定',                       5, 5),
-  ('exempt_q_tol_kvar', 2000, '设备级免考顶满容差(kvar)', '设备Q距极限≤该值视为顶满（附件6§三无ε规定，现场整定）', 0, 100000);
+  ('exempt_q_tol_kvar', 2000, '设备级免考顶满容差(kvar)', '设备Q距极限≤该值视为顶满（附件6§三无ε规定，现场整定）', 0, 100000),
+  ('min_window_completeness_pct', 50, '档窗口最低完整度(%)', 'completeness低于该值的档判INVALID不硬判（数据公平性：缺数窗不罚电厂；1.0数据不可用策略A3/A4最小口径，0=关闭）', 0, 100);
 
 
 -- 7、数据不可用策略参数（原子组合·戊路线唯一实现；Leo 2026-09-02 拍板"完全按照原子性设计实现"）

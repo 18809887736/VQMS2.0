@@ -30,6 +30,22 @@ public final class RegulationJudge {
     }
 
     /**
+     * 数据质量闸门（现场库核对报告发现④）：his_curve_sv 存在 high/low = 0.0 采集坏点，
+     * 不拦则包络被毒化（low=0 → 下界无限宽 → 误判合格）。
+     * 任一侧 ≤ 0 视为脏行不采信 → 返回 null（该分钟等同缺数，走 completeness 降级链）；
+     * low>high 保留行但标 invalid（S16 口径不变）。
+     */
+    public static Band sanitizeBand(BigDecimal low, BigDecimal high) {
+        if (low == null || high == null) {
+            return null;
+        }
+        if (low.signum() <= 0 || high.signum() <= 0) {
+            return null;
+        }
+        return new Band(low, high, low.compareTo(high) <= 0);
+    }
+
+    /**
      * 判定结果：两档状态 + 完整度 + 原始按档无效标记（FAST/ECON/FAST,ECON/null）。
      */
     public record Outcome(String fastState, String econState,
@@ -54,11 +70,24 @@ public final class RegulationJudge {
     public static Outcome judge(BigDecimal targetKv, Map<LocalDateTime, Band> curve,
                                 LocalDateTime t0, int tFast, int tEcon,
                                 boolean exemptFast, boolean exemptEcon) {
+        return judge(targetKv, curve, t0, tFast, tEcon, exemptFast, exemptEcon, null);
+    }
+
+    /**
+     * 判定一条指令（带完整度闸门）。
+     *
+     * @param minCompleteness 档窗口最低完整度（0~1，null 或 0=关闭）：
+     *                        completeness &lt; τ → 该档 INVALID（数据公平性：缺数窗不硬判，
+     *                        1.0 数据不可用策略 A3/A4 最小口径；τ 由 vqms_judge_param.min_window_completeness_pct 整定）
+     */
+    public static Outcome judge(BigDecimal targetKv, Map<LocalDateTime, Band> curve,
+                                LocalDateTime t0, int tFast, int tEcon,
+                                boolean exemptFast, boolean exemptEcon, BigDecimal minCompleteness) {
         if (targetKv == null) {
             return new Outcome(INVALID, INVALID, BigDecimal.ZERO, BigDecimal.ZERO, "FAST,ECON");
         }
-        TierResult fast = judgeTier(targetKv, curve, t0.plusMinutes(1), t0.plusMinutes(tFast));
-        TierResult econ = judgeTier(targetKv, curve, t0.plusMinutes(tFast + 1), t0.plusMinutes(tEcon));
+        TierResult fast = judgeTier(targetKv, curve, t0.plusMinutes(1), t0.plusMinutes(tFast), minCompleteness);
+        TierResult econ = judgeTier(targetKv, curve, t0.plusMinutes(tFast + 1), t0.plusMinutes(tEcon), minCompleteness);
 
         String fastState = fast.state();
         if (PENALIZED.equals(fastState) && exemptFast) {
@@ -83,7 +112,7 @@ public final class RegulationJudge {
     }
 
     private static TierResult judgeTier(BigDecimal targetKv, Map<LocalDateTime, Band> curve,
-                                        LocalDateTime from, LocalDateTime to) {
+                                        LocalDateTime from, LocalDateTime to, BigDecimal minCompleteness) {
         long total = java.time.Duration.between(from, to).toMinutes() + 1;
         List<Band> bands = new ArrayList<>();
         for (LocalDateTime m = from; !m.isAfter(to); m = m.plusMinutes(1)) {
@@ -99,10 +128,16 @@ public final class RegulationJudge {
         if (bands.stream().anyMatch(b -> !b.valid())) {
             return new TierResult(INVALID, completenessOf(bands.size(), total), true);
         }
+        // 完整度闸门（A3/A4 最小口径）：可用度 < τ 的窗口不硬判——缺数缺出来的"不合格"不是电厂责任
+        BigDecimal completeness = completenessOf(bands.size(), total);
+        if (minCompleteness != null && minCompleteness.signum() > 0
+                && completeness.compareTo(minCompleteness) < 0) {
+            return new TierResult(INVALID, completeness, true);
+        }
         BigDecimal minLow = bands.stream().map(Band::low).reduce(BigDecimal::min).orElseThrow();
         BigDecimal maxHigh = bands.stream().map(Band::high).reduce(BigDecimal::max).orElseThrow();
         boolean inBand = targetKv.compareTo(minLow) >= 0 && targetKv.compareTo(maxHigh) <= 0;
-        return new TierResult(inBand ? QUALIFIED : PENALIZED, completenessOf(bands.size(), total), false);
+        return new TierResult(inBand ? QUALIFIED : PENALIZED, completeness, false);
     }
 
     private static BigDecimal completenessOf(int have, long total) {

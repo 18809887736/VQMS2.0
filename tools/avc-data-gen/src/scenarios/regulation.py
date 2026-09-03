@@ -493,6 +493,42 @@ class S23DeviceExemptAbsorb:
                       "exempt_source": "AUTO_DEVICE"})
 
 
+# ────────────────────────── S24-S25 数据公平性闸门 ──────────────────────────
+# τ = vqms_judge_param.min_window_completeness_pct（默认 50，0=关闭）：completeness < τ 的档判 INVALID 不硬判；
+# 0 值坏点拦截 = RegulationJudge.sanitizeBand（现场库核对报告发现④）：high/low 任一 ≤0 的行不采信，等同缺数
+
+
+class S24TauGateBelowThreshold:
+    """完整度闸门·快窗缺 3/4（completeness 0.25 < τ=50%）→ 快档 INVALID（缺数窗不罚电厂，A3/A4 最小口径）；
+    经窗 1/1 正常 → QUAL。期望 {SKIP, QUAL}。"""
+    id = "S24"
+    def build(self, cfg):
+        t0 = at_minute(cfg.base_date, hour=10, minute=0)
+        curve = _win_curve(cfg, t0,
+                           fast_pts=_HOLD_FAST, econ_pts=_HOLD_ECON, missing_main={1, 2, 3})
+        return ScenarioBundle(self.id, "τ闸门·快窗缺3/4（0.25<τ=50%）→快档INVALID", cfg.base_date,
+            commands=[_cmd(t0, 0, "收到远方遥调执行指令:220KV目标值,12231.5.")],
+            curve=curve, yc_points=_realtime_meta(cfg, t0), yx501_timeline=[(t0, 0)],
+            expected={"fast": SKIP, "econ": QUAL, "v_target": 223.15})
+
+
+class S25ZeroBadPointBlocked:
+    """脏值拦截·low_SV=0 坏点（发现④）：偏高不到位（L=225>223.15 应 PEN），min1 行 low=0；
+    不拦截则包络 [0,226] 误夹目标 → 误 QUAL；拦截后该分钟缺数（快窗 completeness 0.75≥τ）→ 仍 PEN。
+    期望 {PEN, PEN}。"""
+    id = "S25"
+    def build(self, cfg):
+        t0 = at_minute(cfg.base_date, hour=10, minute=0)
+        # fast 窗 [1..4]：min1 = (high=226, low=0) 坏点行；min2-4 = 正常偏高不夹
+        fast_pts = [(226, 0)] + [(226, 225)] * 3
+        curve = _win_curve(cfg, t0, fast_pts=fast_pts, econ_pts=_MISS_ABOVE_ECON,
+                           outside=(226, 225))
+        return ScenarioBundle(self.id, "脏值拦截·low=0坏点剔除（不毒化包络）", cfg.base_date,
+            commands=[_cmd(t0, 0, "收到远方遥调执行指令:220KV目标值,12231.5.")],
+            curve=curve, yc_points=_realtime_meta(cfg, t0), yx501_timeline=[(t0, 0)],
+            expected={"fast": PEN, "econ": PEN, "v_target": 223.15})
+
+
 # 场景注册表
 REGULATION_SCENARIOS = [
     S01FastQualEconQual(), S02FastPenEconQual(), S03FastQualEconPen(), S04FastPenEconPen(),
@@ -504,4 +540,5 @@ REGULATION_SCENARIOS = [
     S17TwoCommandsSplit(),
     S18RoundDown29(), S19RoundUp30(),
     S20DeviceExemptInject(), S21DeviceSlackNotExempt(), S22DeviceWrongDirection(), S23DeviceExemptAbsorb(),
+    S24TauGateBelowThreshold(), S25ZeroBadPointBlocked(),
 ]

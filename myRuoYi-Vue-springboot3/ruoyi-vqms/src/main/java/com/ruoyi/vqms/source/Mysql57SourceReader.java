@@ -10,6 +10,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -25,18 +27,29 @@ import com.ruoyi.vqms.statistics.SaveTimeParser;
  * 闸门：
  *  - 时间范围按"原文分钟"过滤（varchar 列无法走索引排序，量级可控全扫后内存过滤；
  *    his_curve_sv/warn_info 无主键无索引是外部库现状）
- *  - his_curve_sv：0.0 脏值拦截 + (save_time,busbar_num) 去重
- *  - 时间非法行丢弃（脏值计数由调用方按 rows 差值记账）
+ *  - 时间非法行丢弃；0 值坏点拦截在判定层（RegulationJudge.sanitizeBand，现场核对报告发现④）
+ *  - 截断防护：结果行数达到 maxRows 上限即 ERROR 告警（静默截断会致合格率虚高，数据公平性底线）
  */
 @Repository
 public class Mysql57SourceReader implements SourceReader {
 
+    private static final Logger log = LoggerFactory.getLogger(Mysql57SourceReader.class);
     private static final DateTimeFormatter MIN = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+    /** 与 SourceDataSourceConfig#setMaxRows 一致；达到即视为可能被截断。 */
+    private static final int MAX_ROWS = 1_000_000;
 
     private final JdbcTemplate jdbc;
 
     public Mysql57SourceReader(@Qualifier("sourceJdbcTemplate") JdbcTemplate sourceJdbcTemplate) {
         this.jdbc = sourceJdbcTemplate;
+    }
+
+    /** 长区间回补防静默截断：达到 maxRows 上限时结果不完整，必须告警（宁可失败不可虚高）。 */
+    private static void assertNotTruncated(int rawSize, String what, LocalDateTime start, LocalDateTime end) {
+        if (rawSize >= MAX_ROWS) {
+            log.error("源库查询结果达到 maxRows={} 上限（{} {}~{}）：结果大概率被截断，"
+                    + "请缩小重算区间分批执行——静默截断会导致合格率虚高", MAX_ROWS, what, start, end);
+        }
     }
 
     @Override
@@ -49,6 +62,7 @@ public class Mysql57SourceReader implements SourceReader {
                 (rs, i) -> new WarnInfoRow(rs.getString(1), rs.getString(2), rs.getLong(3),
                         getLong(rs, 4), rs.getString(5)),
                 lo, hi);
+        assertNotTruncated(raw.size(), "warn_info", start, end);
         List<WarnInfoRow> out = new ArrayList<>(raw.size());
         for (WarnInfoRow r : raw) {
             LocalDateTime t = SaveTimeParser.parseToMinute(r.warnTimeRaw());
@@ -75,6 +89,7 @@ public class Mysql57SourceReader implements SourceReader {
                 (rs, i) -> new HisCurveSvRow(rs.getString(1), rs.getLong(2), rs.getBigDecimal(3),
                         rs.getBigDecimal(4), rs.getBigDecimal(5), rs.getBigDecimal(6)),
                 shiftMinute(lo, -2), shiftMinute(hi, 2));
+        assertNotTruncated(raw.size(), "his_curve_sv", start, end);
         List<HisCurveSvRow> out = new ArrayList<>(raw.size());
         Set<String> seen = new HashSet<>(raw.size() * 2);
         for (HisCurveSvRow r : raw) {
@@ -105,6 +120,7 @@ public class Mysql57SourceReader implements SourceReader {
                         + "where yc_num in (" + joinNums(ycNums) + ") and yc_time >= ? and yc_time <= ?",
                 (rs, i) -> new YcHistoryRow(rs.getLong(1), rs.getString(2), rs.getDouble(3)),
                 lo, hi);
+        assertNotTruncated(raw.size(), "yc_history", start, end);
         List<YcHistoryRow> out = new ArrayList<>(raw.size());
         Set<String> seen = new HashSet<>();
         for (YcHistoryRow r : raw) {
