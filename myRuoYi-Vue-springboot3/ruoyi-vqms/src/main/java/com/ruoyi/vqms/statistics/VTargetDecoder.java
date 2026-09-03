@@ -45,7 +45,8 @@ public final class VTargetDecoder {
         }
     }
 
-    /** 增量解码：V_target = realtime ± 幅值(kV)。缺实时电压/编码非法返回 null。 */
+    /** 增量解码：V_target = realtime ± 幅值(kV)。缺实时电压/编码非法返回 null。
+     *  编码形态 dCmm（4 位）：d=方向 1 降/2 升、C=循环码（合法域 0..5，对齐 decodeTargetValue 轮转码校验）、mm=幅值×0.1kV。 */
     public static BigDecimal decodeIncrement(String text, BigDecimal realtimeKv) {
         String code = extractCode(text);
         if (code == null || code.length() != 4 || code.contains(".")) {
@@ -55,12 +56,17 @@ public final class VTargetDecoder {
             return null;
         }
         int direction;
+        int cycleCode;
         int magnitudeUnits;
         try {
             direction = Integer.parseInt(code.substring(0, 1));
+            cycleCode = Integer.parseInt(code.substring(1, 2));
             magnitudeUnits = Integer.parseInt(code.substring(2, 4));
         } catch (NumberFormatException e) {
             return null;
+        }
+        if (cycleCode < 0 || cycleCode > 5) {
+            return null; // 循环码非法（脏增量码不宽松收进——现场零实例形态，从严）
         }
         BigDecimal delta = BigDecimal.valueOf(magnitudeUnits).multiply(BigDecimal.valueOf(0.1));
         if (direction == 2) {

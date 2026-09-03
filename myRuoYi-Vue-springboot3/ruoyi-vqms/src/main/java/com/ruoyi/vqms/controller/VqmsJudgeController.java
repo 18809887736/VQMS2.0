@@ -7,7 +7,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.ruoyi.common.annotation.Log;
 import com.ruoyi.common.core.domain.AjaxResult;
+import com.ruoyi.common.enums.BusinessType;
 import com.ruoyi.vqms.ingestion.RegulationJudgeService;
 import com.ruoyi.vqms.ingestion.RuntimePipelineService;
 
@@ -28,6 +30,7 @@ public class VqmsJudgeController {
      * 调节合格率判定：按日期区间（含端点）重算指令级明细（幂等 upsert）。
      */
     @PreAuthorize("@ss.hasPermi('vqms:judge:run')")
+    @Log(title = "调节判定重算", businessType = BusinessType.UPDATE)
     @PostMapping("/regulation")
     public AjaxResult judgeRegulation(@RequestParam("start") String start, @RequestParam("end") String end) {
         return AjaxResult.success(regulationJudgeService.judgeByDateRange(
@@ -38,6 +41,7 @@ public class VqmsJudgeController {
      * 投运率记账：按日期区间（含端点）重算四桶分钟计数与率/罚款快照（幂等 upsert）。
      */
     @PreAuthorize("@ss.hasPermi('vqms:judge:run')")
+    @Log(title = "投运率重算", businessType = BusinessType.UPDATE)
     @PostMapping("/runtime")
     public AjaxResult judgeRuntime(@RequestParam("start") String start, @RequestParam("end") String end) {
         return AjaxResult.success(runtimePipelineService.runtimeByDateRange(

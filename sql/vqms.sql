@@ -221,12 +221,12 @@ create table vqms_judge_param (
 ) engine=innodb default charset=utf8mb4 collate=utf8mb4_0900_ai_ci comment='VQMS 判定整定参数';
 
 -- 种子（1.0 Leo 2026-08-14 定，2.0 沿用）：t_fast=4 可整定[1,4]；t_econ=5 锁定（指令5分钟间隔）；
---   分档阈值 1/5 为附件6 政策值锁定
+--   分档阈值 1/5 为外部依据待确认（附件6 原文无 5 分钟分档条款，VQMS 细化口径）
 insert into vqms_judge_param (param_key, param_value, name, description, value_min, value_max) values
   ('t_fast',              4, '快速性档窗口(分钟)',     '快速性档扫描窗口 [1, t_fast]，整数可整定', 1, 4),
   ('t_econ',              5, '经济性档窗口上限(分钟)', '写死=5（指令 5 分钟间隔），锁定不可改',    5, 5),
-  ('tier_threshold_fast', 1, '快速性档分档阈值(分钟)', '附件6 政策值，锁定',                       1, 1),
-  ('tier_threshold_econ', 5, '经济性档分档阈值(分钟)', '附件6 政策值，锁定',                       5, 5),
+  ('tier_threshold_fast', 1, '快速性档分档阈值(分钟)', '外部依据待确认（附件6 无 5 分钟分档条款）', 1, 1),
+  ('tier_threshold_econ', 5, '经济性档分档阈值(分钟)', '外部依据待确认（附件6 无 5 分钟分档条款）', 5, 5),
   ('exempt_q_tol_kvar', 2000, '设备级免考顶满容差(kvar)', '设备Q距极限≤该值视为顶满（附件6§三无ε规定，现场整定）', 0, 100000),
   ('min_window_completeness_pct', 50, '档窗口最低完整度(%)', 'completeness低于该值的档判INVALID不硬判（数据公平性：缺数窗不罚电厂；1.0数据不可用策略A3/A4最小口径，0=关闭）', 0, 100);
 

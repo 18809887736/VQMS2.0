@@ -95,8 +95,12 @@ public class StatsRollupService {
         Long entityId = rows.get(0).getEntityId();
         DayStats stats = RuntimeClassifier.summarize(inService, grid, nonGrid, offline, capacity);
 
-        List<String> mixed = new ArrayList<>();
-        rows.forEach(r -> mixed.add(String.valueOf(r.getEntityId())));
+        // 多主体防护：当前 M/Y 汇总不按 entity 分组，混入多主体行会被静默合到首个主体——先告警暴露
+        if (rows.stream().anyMatch(r -> !entityId.equals(r.getEntityId()))) {
+            log.warn("汇总周期 {} 混入多个考核主体（{}）——当前 M/Y 汇总不分组，结果按主体 {} 记账，"
+                    + "多主体上线前需按 entity_id 分维聚合", period,
+                    rows.stream().map(VqmsRuntimeStats::getEntityId).distinct().toList(), entityId);
+        }
         VqmsRuntimeStats out = new VqmsRuntimeStats();
         out.setStatGrain(grain);
         out.setStatPeriod(period);

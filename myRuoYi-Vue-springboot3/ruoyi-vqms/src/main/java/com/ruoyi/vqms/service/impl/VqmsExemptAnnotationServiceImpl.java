@@ -66,9 +66,28 @@ public class VqmsExemptAnnotationServiceImpl implements IVqmsExemptAnnotationSer
      * @param vqmsExemptAnnotation 调节免考标注
      * @return 结果
      */
+    /**
+     * 修改免考标注（内控约束）：
+     *  - 仅 PENDING 可改——已批/已驳行锁定，改判走复核链（防绕过双人复核）
+     *  - 复核字段（review_status/by/time/opinion）一律剥离，只经 reviewVqmsExemptAnnotation 生效
+     */
     @Override
     public int updateVqmsExemptAnnotation(VqmsExemptAnnotation vqmsExemptAnnotation)
     {
+        VqmsExemptAnnotation row = vqmsExemptAnnotationMapper
+                .selectVqmsExemptAnnotationByAnnotationId(vqmsExemptAnnotation.getAnnotationId());
+        if (row == null)
+        {
+            throw new ServiceException("标注不存在");
+        }
+        if (!"PENDING".equals(row.getReviewStatus()))
+        {
+            throw new ServiceException("已复核标注（" + row.getReviewStatus() + "）锁定不可修改；改判需撤销后重新标注复核");
+        }
+        vqmsExemptAnnotation.setReviewStatus(null);
+        vqmsExemptAnnotation.setReviewBy(null);
+        vqmsExemptAnnotation.setReviewTime(null);
+        vqmsExemptAnnotation.setReviewOpinion(null);
         vqmsExemptAnnotation.setUpdateBy(SecurityUtils.getUsername());
         vqmsExemptAnnotation.setUpdateTime(DateUtils.getNowDate());
         return vqmsExemptAnnotationMapper.updateVqmsExemptAnnotation(vqmsExemptAnnotation);
@@ -83,7 +102,23 @@ public class VqmsExemptAnnotationServiceImpl implements IVqmsExemptAnnotationSer
     @Override
     public int deleteVqmsExemptAnnotationByAnnotationIds(Long[] annotationIds)
     {
+        for (Long id : annotationIds)
+        {
+            assertDeletable(id);
+        }
         return vqmsExemptAnnotationMapper.deleteVqmsExemptAnnotationByAnnotationIds(annotationIds);
+    }
+
+    /** 已复核标注不可物理删除（审计留痕；与 update 锁定口径一致）。 */
+    private void assertDeletable(Long annotationId)
+    {
+        VqmsExemptAnnotation row = vqmsExemptAnnotationMapper
+                .selectVqmsExemptAnnotationByAnnotationId(annotationId);
+        if (row != null && !"PENDING".equals(row.getReviewStatus()))
+        {
+            throw new ServiceException("已复核标注（#" + annotationId + " " + row.getReviewStatus()
+                    + "）不可删除（审计留痕）");
+        }
     }
 
     /**

@@ -50,6 +50,10 @@ class DecoderAndParserTest {
         assertKv("234.05", VTargetDecoder.decodeIncrement(
                 "收到远方遥调执行指令:辽宁母线电压增量指令编码值处理,1202.", kv("234.25")));
         assertNull(VTargetDecoder.decodeIncrement("...,2202.", null));
+        // 循环码合法域 {0..5}：第 2 位 6~9 为脏码，不宽松收进（对齐 decodeTargetValue 轮转码校验）
+        assertNull(VTargetDecoder.decodeIncrement("...,2602.", kv("234.25")));
+        assertNull(VTargetDecoder.decodeIncrement("...,2902.", kv("234.25")));
+        assertKv("234.45", VTargetDecoder.decodeIncrement("...,2502.", kv("234.25")));
     }
 
     @Test
