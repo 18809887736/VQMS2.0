@@ -73,6 +73,15 @@ public class RuntimePipelineService {
             TreeMap<LocalDateTime, Double> exitMain = loadYc(EXIT_MAIN, dayStart, dayEnd);
             TreeMap<LocalDateTime, Double> exitAux = loadYc(EXIT_AUX, dayStart, dayEnd);
 
+            // 缺数≠离线：五信号当日零遥测行 = 源库无数据，跳过不记账
+            // （真实离线日信号行仍在，值显示未并网；幻影 offline=1440 行会污染月/年汇总）
+            if (gridMain.isEmpty() && gridAux.isEmpty() && onoff.isEmpty()
+                    && exitMain.isEmpty() && exitAux.isEmpty()) {
+                log.warn("跳过 {}: 源库当日无任何投运相关遥测行，不记账", d);
+                daySummaries.add(Map.of("date", d.toString(), "skipped", "no-source-data"));
+                continue;
+            }
+
             int inService = 0;
             int exitGrid = 0;
             int exitNonGrid = 0;
@@ -111,7 +120,9 @@ public class RuntimePipelineService {
                     "ratePct", stats.ratePct() == null ? "null" : stats.ratePct().toPlainString(),
                     "penaltyScore", stats.penaltyScore() == null ? "null" : stats.penaltyScore().toPlainString()));
         }
-        runtimeStatsMapper.upsertBatch(rows);
+        if (!rows.isEmpty()) {
+            runtimeStatsMapper.upsertBatch(rows);
+        }
         Map<String, Object> result = Map.of(
                 "start", start.toString(), "end", end.toString(),
                 "batch", LocalDateTime.now().format(BATCH) + "-RUNTIME",

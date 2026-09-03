@@ -545,9 +545,9 @@ values (1, '同步发电机/调相机', '1', 'vqms_device_type', '', 'primary', 
 -- 关闭登录验证码（1.0 定制沿用；不改 RuoYi 原生文件，末尾覆盖默认值）
 UPDATE sys_config SET config_value = 'false' WHERE config_key = 'sys.account.captchaEnabled';
 
--- Quartz 统计任务种子：默认暂停，统计上线拍板后启用（ruoyi-vqms 模块实现后生效）
+-- Quartz 统计任务种子：每日 03:00 重算昨日全链（Phase 1 上线 2026-09-03 默认启用）
 insert into sys_job (job_name, job_group, invoke_target, cron_expression, misfire_policy, concurrent, status, create_by, create_time, remark)
 select 'VQMS 统计日重算（调节+投运率+rollup）', 'DEFAULT', 'vqmsStatsTask.recomputeYesterday()',
-        '0 0 3 * * ?', '3', '1', '1', 'admin', sysdate(),
-        '每日 03:00 重算昨日全链；默认暂停——统计上线拍板后由管理员启用（防上线前静默产数）'
+        '0 0 3 * * ?', '3', '1', '0', 'admin', sysdate(),
+        '每日 03:00 重算昨日全链（幂等可重跑）；空数据日自动跳过不记账'
 where not exists (select 1 from sys_job where invoke_target = 'vqmsStatsTask.recomputeYesterday()');
