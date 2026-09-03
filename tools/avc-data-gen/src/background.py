@@ -24,7 +24,8 @@ def _h(*seeds: int, mod: int) -> int:
     return x % mod
 
 
-def emit_background_rows(day_idx: int, day: datetime, occupied: dict, is_scenario_day: bool = False) -> dict[str, list[dict]]:
+def emit_background_rows(day_idx: int, day: datetime, occupied: dict, is_scenario_day: bool = False,
+                         scenario_points: set | None = None) -> dict[str, list[dict]]:
     """生成 day（00:00~23:59）背景三表行。
 
     occupied: {"curve": {(busbar, minute_dt)}, "cmd": {(warn_time_str, obj)},
@@ -34,6 +35,9 @@ def emit_background_rows(day_idx: int, day: datetime, occupied: dict, is_scenari
     is_scenario_day: 场景日启用"保护区"——09:30~10:30 完全不写背景
     （场景的 yx501 阶跃/增量 t0 实时电压/窗口留白等语义不被背景网格点覆盖，
     manifest 验收 2026-09-02 抓出的背景-场景冲突根因）。
+    scenario_points: 当日场景写过的 yc 点号集合——阶跃点 {3009,521,522,501} 仅当
+    场景自带该点时间线时跳过（U 场景日独占投退/原因；S 场景日不写 3009，背景补写
+    投运=1 保持全天，否则 S 日全天被误判退出——rollup 月度验收 2026-09-02 抓出）。
     """
     day0 = day.replace(hour=0, minute=0, second=0, microsecond=0)
     curve, cmd, yc = [], [], []
@@ -102,11 +106,13 @@ def emit_background_rows(day_idx: int, day: datetime, occupied: dict, is_scenari
             3009: 1,                                     # AVC 投入（背景默认投运）
             501: 0,                                      # 免考旗：未顶满
         }
+        step_owned = scenario_points or set()
         if is_scenario_day:
-            # 阶跃保持类信号（AVC投退/退出原因/免考旗）场景日完全由场景时间线独占：
-            # 背景在变位点之间的 15 分钟补写会切开场景的保持段（U05/U06 验收 2026-09-02 抓出）
+            # 阶跃保持类信号（AVC投退/退出原因/免考旗）：仅当场景自带时间线时由场景独占
+            # （U 场景日；S 场景日不写 3009，背景照常补写保持全天投运）
             for step_pt in (3009, 521, 522, 501):
-                values.pop(step_pt, None)
+                if step_pt in step_owned:
+                    values.pop(step_pt, None)
         for yc_num, val in values.items():
             if (yc_num, t) in occupied["yc"]:
                 continue

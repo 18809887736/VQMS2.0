@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.vqms.mapper.VqmsRegulationStatsMapper">
+
+    <resultMap type="com.ruoyi.vqms.domain.VqmsRegulationStats" id="VqmsRegulationStatsResult">
+        <id     property="id"               column="id"/>
+        <result property="statGrain"        column="stat_grain"/>
+        <result property="statPeriod"       column="stat_period"/>
+        <result property="entityId"         column="entity_id"/>
+        <result property="algorithmId"      column="algorithm_id"/>
+        <result property="totalCmds"        column="total_cmds"/>
+        <result property="qualifiedFast"    column="qualified_fast"/>
+        <result property="penalizedFast"    column="penalized_fast"/>
+        <result property="exemptedFast"     column="exempted_fast"/>
+        <result property="invalidFast"      column="invalid_fast"/>
+        <result property="qualifiedEcon"    column="qualified_econ"/>
+        <result property="penalizedEcon"    column="penalized_econ"/>
+        <result property="exemptedEcon"     column="exempted_econ"/>
+        <result property="invalidEcon"      column="invalid_econ"/>
+        <result property="undecodableCount" column="undecodable_count"/>
+        <result property="pendedCount"      column="pended_count"/>
+        <result property="excludedCount"    column="excluded_count"/>
+        <result property="completenessSum"  column="completeness_sum"/>
+    </resultMap>
+
+    <insert id="rollupDay">
+        insert into vqms_regulation_stats
+            (stat_grain, stat_period, entity_id, algorithm_id, total_cmds,
+             qualified_fast, penalized_fast, exempted_fast, invalid_fast,
+             qualified_econ, penalized_econ, exempted_econ, invalid_econ,
+             undecodable_count, pended_count, excluded_count, completeness_sum, recompute_at)
+        select 'D', stat_date, entity_id,
+               case when count(distinct algorithm_id) = 1 then max(algorithm_id) else 'MIXED' end,
+               count(*),
+               sum(fast_state = 'QUALIFIED'), sum(fast_state = 'PENALIZED'),
+               sum(fast_state = 'EXEMPTED'), sum(fast_state = 'INVALID'),
+               sum(econ_state = 'QUALIFIED'), sum(econ_state = 'PENALIZED'),
+               sum(econ_state = 'EXEMPTED'), sum(econ_state = 'INVALID'),
+               sum(undecodable_reason is not null), 0, 0, sum(completeness), sysdate()
+        from vqms_regulation_cmd
+        where stat_date between #{start} and #{end}
+        group by stat_date, entity_id
+        on duplicate key update
+            algorithm_id = values(algorithm_id), total_cmds = values(total_cmds),
+            qualified_fast = values(qualified_fast), penalized_fast = values(penalized_fast),
+            exempted_fast = values(exempted_fast), invalid_fast = values(invalid_fast),
+            qualified_econ = values(qualified_econ), penalized_econ = values(penalized_econ),
+            exempted_econ = values(exempted_econ), invalid_econ = values(invalid_econ),
+            undecodable_count = values(undecodable_count), completeness_sum = values(completeness_sum),
+            recompute_at = values(recompute_at)
+    </insert>
+
+    <insert id="rollupMonth">
+        insert into vqms_regulation_stats
+            (stat_grain, stat_period, entity_id, algorithm_id, total_cmds,
+             qualified_fast, penalized_fast, exempted_fast, invalid_fast,
+             qualified_econ, penalized_econ, exempted_econ, invalid_econ,
+             undecodable_count, pended_count, excluded_count, completeness_sum, recompute_at)
+        select 'M', date_format(stat_period, '%Y-%m-01'), entity_id,
+               case when count(distinct algorithm_id) = 1 then max(algorithm_id) else 'MIXED' end,
+               sum(total_cmds),
+               sum(qualified_fast), sum(penalized_fast), sum(exempted_fast), sum(invalid_fast),
+               sum(qualified_econ), sum(penalized_econ), sum(exempted_econ), sum(invalid_econ),
+               sum(undecodable_count), sum(pended_count), sum(excluded_count), sum(completeness_sum), sysdate()
+        from vqms_regulation_stats
+        where stat_grain = 'D'
+          and stat_period &gt;= date_format(#{monthStart}, '%Y-%m-01')
+          and stat_period &lt; date_format(#{monthStart}, '%Y-%m-01') + interval 1 month
+        group by date_format(stat_period, '%Y-%m-01'), entity_id
+        on duplicate key update
+            algorithm_id = values(algorithm_id), total_cmds = values(total_cmds),
+            qualified_fast = values(qualified_fast), penalized_fast = values(penalized_fast),
+            exempted_fast = values(exempted_fast), invalid_fast = values(invalid_fast),
+            qualified_econ = values(qualified_econ), penalized_econ = values(penalized_econ),
+            exempted_econ = values(exempted_econ), invalid_econ = values(invalid_econ),
+            undecodable_count = values(undecodable_count), completeness_sum = values(completeness_sum),
+            recompute_at = values(recompute_at)
+    </insert>
+
+    <insert id="rollupYear">
+        insert into vqms_regulation_stats
+            (stat_grain, stat_period, entity_id, algorithm_id, total_cmds,
+             qualified_fast, penalized_fast, exempted_fast, invalid_fast,
+             qualified_econ, penalized_econ, exempted_econ, invalid_econ,
+             undecodable_count, pended_count, excluded_count, completeness_sum, recompute_at)
+        select 'Y', date_format(stat_period, '%Y-01-01'), entity_id,
+               case when count(distinct algorithm_id) = 1 then max(algorithm_id) else 'MIXED' end,
+               sum(total_cmds),
+               sum(qualified_fast), sum(penalized_fast), sum(exempted_fast), sum(invalid_fast),
+               sum(qualified_econ), sum(penalized_econ), sum(exempted_econ), sum(invalid_econ),
+               sum(undecodable_count), sum(pended_count), sum(excluded_count), sum(completeness_sum), sysdate()
+        from vqms_regulation_stats
+        where stat_grain = 'M'
+          and stat_period &gt;= date_format(#{yearStart}, '%Y-01-01')
+          and stat_period &lt; date_format(#{yearStart}, '%Y-01-01') + interval 1 year
+        group by date_format(stat_period, '%Y-01-01'), entity_id
+        on duplicate key update
+            algorithm_id = values(algorithm_id), total_cmds = values(total_cmds),
+            qualified_fast = values(qualified_fast), penalized_fast = values(penalized_fast),
+            exempted_fast = values(exempted_fast), invalid_fast = values(invalid_fast),
+            qualified_econ = values(qualified_econ), penalized_econ = values(penalized_econ),
+            exempted_econ = values(exempted_econ), invalid_econ = values(invalid_econ),
+            undecodable_count = values(undecodable_count), completeness_sum = values(completeness_sum),
+            recompute_at = values(recompute_at)
+    </insert>
+
+    <select id="selectByRange" resultMap="VqmsRegulationStatsResult">
+        select id, stat_grain, stat_period, entity_id, algorithm_id, total_cmds,
+               qualified_fast, penalized_fast, exempted_fast, invalid_fast,
+               qualified_econ, penalized_econ, exempted_econ, invalid_econ,
+               undecodable_count, pended_count, excluded_count, completeness_sum
+        from vqms_regulation_stats
+        where stat_grain = #{grain} and stat_period &gt;= #{start} and stat_period &lt;= #{end}
+        order by stat_period
+    </select>
+
+</mapper>

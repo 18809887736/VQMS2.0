@@ -157,6 +157,7 @@ def main(argv=None) -> int:
         manifest = []
         for di, day in enumerate(days):
             occ = {"curve": set(), "cmd": set(), "yc": set()}
+            scenario_points = set()
             if di < len(ALL_SCENARIOS):
                 sc = ALL_SCENARIOS[di]
                 cfg_day = copy(cfg)
@@ -175,10 +176,12 @@ def main(argv=None) -> int:
                 for r in rows_y:
                     ydt = datetime.strptime(r["yc_time"], "%Y-%m-%d %H:%M:%S.%f")
                     occ["yc"].add((r["yc_num"], round_to_minute(ydt)))
+                    scenario_points.add(r["yc_num"])
                 all_rows["his_curve_sv"] += rows_c
                 all_rows["warn_info"] += rows_w
                 all_rows["yc_history"] += rows_y
-            bg = emit_background_rows(di, day, occ, is_scenario_day=(di < len(ALL_SCENARIOS)))
+            bg = emit_background_rows(di, day, occ, is_scenario_day=(di < len(ALL_SCENARIOS)),
+                                      scenario_points=scenario_points)
             for k in all_rows:
                 all_rows[k] += bg[k]
 
