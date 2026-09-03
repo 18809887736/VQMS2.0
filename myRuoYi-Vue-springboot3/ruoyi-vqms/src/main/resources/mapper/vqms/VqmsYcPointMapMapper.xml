@@ -6,6 +6,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     
     <resultMap type="VqmsYcPointMap" id="VqmsYcPointMapResult">
         <result property="pointNum"    column="point_num"    />
+        <result property="pointKey"    column="point_key"    />
         <result property="pointKind"    column="point_kind"    />
         <result property="pointName"    column="point_name"    />
         <result property="pointType"    column="point_type"    />
@@ -22,12 +23,13 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </resultMap>
 
     <sql id="selectVqmsYcPointMapVo">
-        select point_num, point_kind, point_name, point_type, entity_id, busbar_num, unit, state_1_label, state_0_label, gate_enabled, status, create_time, update_time, remark from vqms_yc_point_map
+        select point_num, point_key, point_kind, point_name, point_type, entity_id, busbar_num, unit, state_1_label, state_0_label, gate_enabled, status, create_time, update_time, remark from vqms_yc_point_map
     </sql>
 
     <select id="selectVqmsYcPointMapList" parameterType="VqmsYcPointMap" resultMap="VqmsYcPointMapResult">
         <include refid="selectVqmsYcPointMapVo"/>
-        <where>  
+        <where>
+            <if test="pointKey != null  and pointKey != ''"> and point_key = #{pointKey}</if>
             <if test="pointKind != null  and pointKind != ''"> and point_kind = #{pointKind}</if>
             <if test="pointName != null  and pointName != ''"> and point_name like concat('%', #{pointName}, '%')</if>
             <if test="pointType != null  and pointType != ''"> and point_type = #{pointType}</if>
@@ -50,6 +52,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         insert into vqms_yc_point_map
         <trim prefix="(" suffix=")" suffixOverrides=",">
             <if test="pointNum != null">point_num,</if>
+            <if test="pointKey != null and pointKey != ''">point_key,</if>
             <if test="pointKind != null and pointKind != ''">point_kind,</if>
             <if test="pointName != null and pointName != ''">point_name,</if>
             <if test="pointType != null">point_type,</if>
@@ -66,6 +69,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
          </trim>
         <trim prefix="values (" suffix=")" suffixOverrides=",">
             <if test="pointNum != null">#{pointNum},</if>
+            <if test="pointKey != null and pointKey != ''">#{pointKey},</if>
             <if test="pointKind != null and pointKind != ''">#{pointKind},</if>
             <if test="pointName != null and pointName != ''">#{pointName},</if>
             <if test="pointType != null">#{pointType},</if>
@@ -85,6 +89,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     <update id="updateVqmsYcPointMap" parameterType="VqmsYcPointMap">
         update vqms_yc_point_map
         <trim prefix="SET" suffixOverrides=",">
+            <if test="pointKey != null and pointKey != ''">point_key = #{pointKey},</if>
             <if test="pointKind != null and pointKind != ''">point_kind = #{pointKind},</if>
             <if test="pointName != null and pointName != ''">point_name = #{pointName},</if>
             <if test="pointType != null">point_type = #{pointType},</if>

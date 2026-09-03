@@ -64,8 +64,8 @@ import com.ruoyi.vqms.statistics.VTargetDecoder;
  *    全部 AVC 闭环设备 Q 顶到各自极限（容差 exempt_q_tol_kvar）→ 该档免考
  *
  * v1 简化口径（sim 联调）：
- *  - 判定组 = group 0（220kV），主判定母线 = 组 default_main_busbar_num 兜底
- *  - 实时电压点 = vqms_busbar.realtime_yc_num，空则回退 4002（sim 占位，现场核对后落库生效）
+ *  - 判定组 = group 0（220kV），主判定母线 = 组 default_main_busbar_num（未配置 fail-fast）
+ *  - 实时电压点 = vqms_busbar.realtime_yc_num（未整定降级：增量指令 INVALID，绝对值目标不受影响）
  */
 @Service
 public class RegulationJudgeService {
@@ -74,8 +74,6 @@ public class RegulationJudgeService {
     private static final DateTimeFormatter BATCH = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
 
     private static final String ALGORITHM_ID = "V2_0";
-    private static final long EXEMPT_FLAG_POINT = 501L;
-    private static final long SIM_REALTIME_POINT = 4002L;
     private static final int T_ECON = 5;
     private static final int BATCH_SIZE = 500;
 
@@ -106,8 +104,11 @@ public class RegulationJudgeService {
     @Autowired
     private VqmsExemptAnnotationMapper exemptAnnotationMapper;
 
-    /** 逐日免考判定装配上下文（设备台账 + 当日生效 P-Q 曲线 + 当日设备遥测 + 已批标注）。 */
-    private record DayContext(BigDecimal qTol, List<VqmsReactiveDevice> loopDevices,
+    @Autowired
+    private VqmsPointConfig pointConfig;
+
+    /** 逐日免考判定装配上下文（主体 + 设备台账 + 当日生效 P-Q 曲线 + 当日设备遥测 + 已批标注）。 */
+    private record DayContext(long entityId, BigDecimal qTol, List<VqmsReactiveDevice> loopDevices,
                               Map<Long, List<PqPoint>> curves,
                               Map<Long, TreeMap<LocalDateTime, Double>> deviceYc,
                               Map<String, VqmsExemptAnnotation> approved) {
@@ -118,14 +119,19 @@ public class RegulationJudgeService {
             throw new ServiceException("结束日不能早于起始日");
         }
         int tFast = resolveTFast();
+        long entityId = pointConfig.resolveEntityId();
         long mainBusbar = resolveMainBusbar();
-        long realtimePoint = resolveRealtimePoint(mainBusbar);
+        Long realtimePoint = resolveRealtimePoint(mainBusbar);
+        Long exemptFlagPt = pointConfig.optional(pointConfig.loadGatePoints(),
+                VqmsPointConfig.EXEMPT_FLAG, "AUTO_YX 免考链停用，免考走 MANUAL/AUTO_DEVICE");
         BigDecimal qTol = resolveQTol();
         List<VqmsReactiveDevice> loopDevices = loadLoopDevices();
         Map<Long, List<VqmsDevicePqLimit>> pqRows = loadPqRows(loopDevices);
         Map<String, VqmsExemptAnnotation> approved = loadApprovedAnnotations();
-        log.info("判定开始 {}~{} tFast={} 主母线={} 实时点={} 免考旗={} qTol={} 闭环设备={} 曲线版点数={} 已批标注={}",
-                start, end, tFast, mainBusbar, realtimePoint, EXEMPT_FLAG_POINT,
+        log.info("判定开始 {}~{} 主体={} tFast={} 主母线={} 实时点={} 免考旗={} qTol={} 闭环设备={} 曲线版点数={} 已批标注={}",
+                start, end, entityId, tFast, mainBusbar,
+                realtimePoint == null ? "未整定" : realtimePoint,
+                exemptFlagPt == null ? "未整定" : exemptFlagPt,
                 qTol.toPlainString(), loopDevices.size(),
                 pqRows.values().stream().mapToInt(List::size).sum(), approved.size());
 
@@ -145,9 +151,11 @@ public class RegulationJudgeService {
                 continue;
             }
             Map<LocalDateTime, Band> curve = loadCurve(mainBusbar, dayStart, dayEnd);
-            TreeMap<LocalDateTime, Double> exemptFlag = loadYc(EXEMPT_FLAG_POINT, dayStart, dayEnd);
-            TreeMap<LocalDateTime, Double> realtime = loadYc(realtimePoint, dayStart, dayEnd);
-            DayContext ctx = new DayContext(qTol, loopDevices,
+            TreeMap<LocalDateTime, Double> exemptFlag = exemptFlagPt == null
+                    ? new TreeMap<>() : loadYc(exemptFlagPt, dayStart, dayEnd);
+            TreeMap<LocalDateTime, Double> realtime = realtimePoint == null
+                    ? new TreeMap<>() : loadYc(realtimePoint, dayStart, dayEnd);
+            DayContext ctx = new DayContext(entityId, qTol, loopDevices,
                     resolveCurves(pqRows, d), loadDeviceYc(loopDevices, dayStart, dayEnd), approved);
 
             for (VqmsCommandLedger cmd : cmds) {
@@ -225,7 +233,7 @@ public class RegulationJudgeService {
 
         VqmsRegulationCmd r = new VqmsRegulationCmd();
         r.setStatDate(t0.toLocalDate());
-        r.setEntityId(1L);
+        r.setEntityId(ctx.entityId());
         r.setGroupNum(0L);
         r.setWarnTimeRaw(cmd.getWarnTimeRaw());
         r.setMillisecond(cmd.getMillisecond());
@@ -487,19 +495,25 @@ public class RegulationJudgeService {
                 }
             }
         }
-        return 0L;
+        throw new ServiceException("判定组未配置: vqms_busbar_group 无 group_num=0 行的 default_main_busbar_num（现场台账整定）");
     }
 
-    private long resolveRealtimePoint(long busbarNum) {
+    /** 主母线 t0 实时电压点：只认 vqms_busbar.realtime_yc_num 台账（现场候选 yc8 东母/yc14 西母）。
+     *  未整定返回 null → 增量指令全部 INVALID（绝对值目标解码不受影响），降级告警不阻断。 */
+    private Long resolveRealtimePoint(long busbarNum) {
         List<VqmsBusbar> bars = busbarMapper.selectVqmsBusbarList(new VqmsBusbar());
         if (bars != null) {
             for (VqmsBusbar b : bars) {
-                if (b.getBusbarNum() != null && b.getBusbarNum() == busbarNum && b.getRealtimeYcNum() != null) {
-                    return b.getRealtimeYcNum();
+                if (b.getBusbarNum() != null && b.getBusbarNum() == busbarNum) {
+                    if (b.getRealtimeYcNum() != null) {
+                        return b.getRealtimeYcNum();
+                    }
+                    break;
                 }
             }
         }
-        return SIM_REALTIME_POINT; // sim 占位：现场核对后 vqms_busbar.realtime_yc_num 落库生效
+        log.error("母线 {} realtime_yc_num 未整定（vqms_busbar 台账；候选 yc8 东母/yc14 西母）→ 增量指令将全部 INVALID", busbarNum);
+        return null;
     }
 
     private void accumulate(Map<String, Long> counts, VqmsRegulationCmd r) {

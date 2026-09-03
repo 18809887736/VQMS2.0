@@ -28,10 +28,10 @@ import com.ruoyi.vqms.statistics.SaveTimeParser;
 /**
  * 投运率管线（编排层）：yc 五信号 → 逐分钟四桶分类 → vqms_runtime_stats 日记账（幂等 upsert）。
  *
- * 信号（points.yaml 口径，全部阶跃保持读法）：
- *  - 并网 yc511/512（≥10=并网；场景逐分钟写、背景 15 分钟写，保持读法统一）
- *  - AVC 投退 yc3009
- *  - 退出原因 yc521/522（1=电网免责；其余非电网，从严）
+ * 信号全部按语义键消费 vqms_yc_point_map 注册表（现场接线配置化，换号改库不改代码）：
+ *  - grid_signal_main / grid_signal_aux 并网（≥10=并网；场景逐分钟写、背景 15 分钟写，保持读法统一）
+ *  - avc_onoff AVC 投退
+ *  - exit_reason_main / exit_reason_aux 退出原因（1=电网免责；其余非电网，从严）
  * 分类逻辑全部在 statistics 纯函数；本类只做装配与落库。
  */
 @Service
@@ -39,13 +39,6 @@ public class RuntimePipelineService {
 
     private static final Logger log = LoggerFactory.getLogger(RuntimePipelineService.class);
     private static final DateTimeFormatter BATCH = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
-
-    private static final long GRID_MAIN = 511L;
-    private static final long GRID_AUX = 512L;
-    private static final long AVC_ONOFF = 3009L;
-    private static final long EXIT_MAIN = 521L;
-    private static final long EXIT_AUX = 522L;
-    private static final long ENTITY_ID = 1L;
 
     @Autowired
     private SourceReader sourceReader;
@@ -56,28 +49,42 @@ public class RuntimePipelineService {
     @Autowired
     private VqmsEntityMapper entityMapper;
 
+    @Autowired
+    private VqmsPointConfig pointConfig;
+
     public Map<String, Object> runtimeByDateRange(LocalDate start, LocalDate end) {
         if (end.isBefore(start)) {
             throw new ServiceException("结束日不能早于起始日");
         }
-        BigDecimal capacityKw = resolveCapacity();
+        long entityId = pointConfig.resolveEntityId();
+        Map<String, Long> pts = pointConfig.loadGatePoints();
+        long gridMainPt = pointConfig.require(pts, VqmsPointConfig.GRID_SIGNAL_MAIN);
+        long gridAuxPt = pointConfig.require(pts, VqmsPointConfig.GRID_SIGNAL_AUX);
+        long onoffPt = pointConfig.require(pts, VqmsPointConfig.AVC_ONOFF);
+        long exitMainPt = pointConfig.require(pts, VqmsPointConfig.EXIT_REASON_MAIN);
+        long exitAuxPt = pointConfig.require(pts, VqmsPointConfig.EXIT_REASON_AUX);
+        BigDecimal capacityKw = resolveCapacity(entityId);
+        log.info("投运率管线 {}~{} 主体={} 容量={} 点号: 并网主={} 副={} 投退={} 退因主={} 副={}",
+                start, end, entityId, capacityKw == null ? "null" : capacityKw.toPlainString(),
+                gridMainPt, gridAuxPt, onoffPt, exitMainPt, exitAuxPt);
 
         List<VqmsRuntimeStats> rows = new ArrayList<>();
         List<Map<String, Object>> daySummaries = new ArrayList<>();
         for (LocalDate d = start; !d.isAfter(end); d = d.plusDays(1)) {
             LocalDateTime dayStart = d.atStartOfDay();
             LocalDateTime dayEnd = d.atTime(23, 59);
-            TreeMap<LocalDateTime, Double> gridMain = loadYc(GRID_MAIN, dayStart, dayEnd);
-            TreeMap<LocalDateTime, Double> gridAux = loadYc(GRID_AUX, dayStart, dayEnd);
-            TreeMap<LocalDateTime, Double> onoff = loadYc(AVC_ONOFF, dayStart, dayEnd);
-            TreeMap<LocalDateTime, Double> exitMain = loadYc(EXIT_MAIN, dayStart, dayEnd);
-            TreeMap<LocalDateTime, Double> exitAux = loadYc(EXIT_AUX, dayStart, dayEnd);
+            TreeMap<LocalDateTime, Double> gridMain = loadYc(gridMainPt, dayStart, dayEnd);
+            TreeMap<LocalDateTime, Double> gridAux = loadYc(gridAuxPt, dayStart, dayEnd);
+            TreeMap<LocalDateTime, Double> onoff = loadYc(onoffPt, dayStart, dayEnd);
+            TreeMap<LocalDateTime, Double> exitMain = loadYc(exitMainPt, dayStart, dayEnd);
+            TreeMap<LocalDateTime, Double> exitAux = loadYc(exitAuxPt, dayStart, dayEnd);
 
             // 缺数≠离线：五信号当日零遥测行 = 源库无数据，跳过不记账
             // （真实离线日信号行仍在，值显示未并网；幻影 offline=1440 行会污染月/年汇总）
             if (gridMain.isEmpty() && gridAux.isEmpty() && onoff.isEmpty()
                     && exitMain.isEmpty() && exitAux.isEmpty()) {
-                log.warn("跳过 {}: 源库当日无任何投运相关遥测行，不记账", d);
+                log.error("跳过 {}: 源库当日无任何投运相关遥测行（五信号 {} 个点全空），不记账——"
+                        + "若非计划内缺数日请排查对端落盘", d, 5);
                 daySummaries.add(Map.of("date", d.toString(), "skipped", "no-source-data"));
                 continue;
             }
@@ -105,7 +112,7 @@ public class RuntimePipelineService {
             VqmsRuntimeStats r = new VqmsRuntimeStats();
             r.setStatGrain("D");
             r.setStatPeriod(d);
-            r.setEntityId(ENTITY_ID);
+            r.setEntityId(entityId);
             r.setInServiceMin(inService);
             r.setExitGridMin(exitGrid);
             r.setExitNonGridMin(exitNonGrid);
@@ -156,8 +163,8 @@ public class RuntimePipelineService {
         return m;
     }
 
-    private BigDecimal resolveCapacity() {
-        VqmsEntity e = entityMapper.selectVqmsEntityById(ENTITY_ID);
+    private BigDecimal resolveCapacity(long entityId) {
+        VqmsEntity e = entityMapper.selectVqmsEntityById(entityId);
         return e == null ? null : e.getRatedCapacityKw();
     }
 }

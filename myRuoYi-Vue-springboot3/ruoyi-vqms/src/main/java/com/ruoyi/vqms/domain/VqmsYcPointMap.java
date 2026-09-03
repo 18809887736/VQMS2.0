@@ -18,6 +18,10 @@ public class VqmsYcPointMap extends BaseEntity
     /** 点号（yc/yx 统一注册，对齐外部 yc_history / yx_history） */
     private Long pointNum;
 
+    /** 语义键（管线消费用，唯一：grid_signal_main/avc_onoff/exempt_flag 等；空=资料行不参与管线） */
+    @Excel(name = "语义键")
+    private String pointKey;
+
     /** C=遥测 yc / X=遥信 yx */
     @Excel(name = "C=遥测 yc / X=遥信 yx")
     private String pointKind;
@@ -58,14 +62,24 @@ public class VqmsYcPointMap extends BaseEntity
     @Excel(name = "状态：0=正常, 1=停用")
     private String status;
 
-    public void setPointNum(Long pointNum) 
+    public void setPointNum(Long pointNum)
     {
         this.pointNum = pointNum;
     }
 
-    public Long getPointNum() 
+    public Long getPointNum()
     {
         return pointNum;
+    }
+
+    public void setPointKey(String pointKey)
+    {
+        this.pointKey = pointKey;
+    }
+
+    public String getPointKey()
+    {
+        return pointKey;
     }
 
     public void setPointKind(String pointKind) 
