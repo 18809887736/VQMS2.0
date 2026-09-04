@@ -1,0 +1,5 @@
+# Railway Redis: no password (private network), appendonly for persistence
+# Build context = docker/redis/ (uploaded via `railway up --path-as-root`)
+FROM redis:7-alpine
+COPY redis.conf /usr/local/etc/redis/redis.conf
+CMD ["redis-server", "/usr/local/etc/redis/redis.conf", "--appendonly", "yes"]

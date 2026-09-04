@@ -1,0 +1,2 @@
+# Force LF for shell scripts (prevents CRLF breakage in Linux containers on Windows checkouts)
+*.sh text eol=lf
