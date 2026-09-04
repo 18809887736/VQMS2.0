@@ -27,7 +27,7 @@ import com.ruoyi.vqms.statistics.SaveTimeParser;
  * 闸门：
  *  - 时间范围按"原文分钟"过滤（varchar 列无法走索引排序，量级可控全扫后内存过滤；
  *    his_curve_sv/warn_info 无主键无索引是外部库现状）
- *  - 时间非法行丢弃；0 值坏点拦截在判定层（RegulationJudge.sanitizeBand，现场核对报告发现④）
+ *  - 时间非法行丢弃；0 值坏点拦截按调用方传入开关（核实单 §4 界面可整定，默认拦截——发现④）
  *  - 截断防护：结果行数达到 maxRows 上限即 ERROR 告警（静默截断会致合格率虚高，数据公平性底线）
  */
 @Repository
@@ -75,7 +75,8 @@ public class Mysql57SourceReader implements SourceReader {
     }
 
     @Override
-    public List<HisCurveSvRow> fetchCurve(Collection<Long> busbarNums, LocalDateTime start, LocalDateTime end) {
+    public List<HisCurveSvRow> fetchCurve(Collection<Long> busbarNums, LocalDateTime start, LocalDateTime end,
+                                          boolean zeroBadpointBlock) {
         if (busbarNums == null || busbarNums.isEmpty()) {
             return List.of();
         }
@@ -97,7 +98,7 @@ public class Mysql57SourceReader implements SourceReader {
             if (t == null || t.isBefore(start) || t.isAfter(end)) {
                 continue;
             }
-            if (isZero(r.highSv()) || isZero(r.lowSv()) || isZero(r.averageSv())) {
+            if (zeroBadpointBlock && (isZero(r.highSv()) || isZero(r.lowSv()) || isZero(r.averageSv()))) {
                 continue; // 0.0 脏值拦截（防包络被毒化）
             }
             if (!seen.add(r.saveTimeRaw().trim() + "|" + r.busbarNum())) {

@@ -57,7 +57,7 @@ public class VqmsCurveController extends BaseController {
         if (start.plusDays(MAX_RANGE_DAYS).isBefore(end)) {
             throw new ServiceException("曲线查询时间范围上限 " + MAX_RANGE_DAYS + " 天");
         }
-        List<HisCurveSvRow> rows = sourceReader.fetchCurve(List.of(busbarNum), start, end);
+        List<HisCurveSvRow> rows = sourceReader.fetchCurve(List.of(busbarNum), start, end, true);
         // 分钟对齐 + 每分钟一行（同分钟 jitter 多行取首行）+ 时间升序
         Map<String, Map<String, Object>> byMinute = new HashMap<>();
         for (HisCurveSvRow r : rows) {

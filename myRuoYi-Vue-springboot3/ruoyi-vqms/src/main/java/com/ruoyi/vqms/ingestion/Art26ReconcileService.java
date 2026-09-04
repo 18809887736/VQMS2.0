@@ -49,6 +49,9 @@ public class Art26ReconcileService {
     @Autowired
     private VqmsPointConfig pointConfig;
 
+    @Autowired
+    private com.ruoyi.vqms.mapper.VqmsJudgeParamMapper judgeParamMapper;
+
     /** 逐日对账行（分钟数）。 */
     public record DayRow(LocalDate date, int total, int qualified, int exemptClosedLoop,
                          int violationExitAvc, int noCurve, int noData) {
@@ -75,7 +78,8 @@ public class Art26ReconcileService {
             throw new ServiceException("季度 " + quarter + " 母线 " + busbarNum + " 无考核曲线——先登记/导入下发曲线");
         }
 
-        Map<LocalDateTime, BigDecimal> measured = loadMeasured(busbarNum, ts, te);
+        boolean zeroBlock = resolveFlag("zero_badpoint_block_enabled", 1);
+        Map<LocalDateTime, BigDecimal> measured = loadMeasured(busbarNum, ts, te, zeroBlock);
         long avcPt = pointConfig.require(pointConfig.loadGatePoints(), VqmsPointConfig.AVC_ONOFF);
         TreeMap<LocalDateTime, Double> onoff = loadYc(avcPt, ts, te);
 
@@ -125,9 +129,19 @@ public class Art26ReconcileService {
                 noCurve, noData, curves, days);
     }
 
-    /** 实测电压：average_SV 优先，缺则 (low+high)/2；0 值坏点行剔除（发现④）。 */
-    private Map<LocalDateTime, BigDecimal> loadMeasured(long busbarNum, LocalDateTime ts, LocalDateTime te) {
-        List<HisCurveSvRow> rows = sourceReader.fetchCurve(List.of(busbarNum), ts.minusMinutes(2), te.plusMinutes(2));
+    private boolean resolveFlag(String key, int defaultValue) {
+        com.ruoyi.vqms.domain.VqmsJudgeParam q = new com.ruoyi.vqms.domain.VqmsJudgeParam();
+        q.setParamKey(key);
+        java.util.List<com.ruoyi.vqms.domain.VqmsJudgeParam> list = judgeParamMapper.selectVqmsJudgeParamList(q);
+        if (list != null && !list.isEmpty() && list.get(0).getParamValue() != null) {
+            return list.get(0).getParamValue() != 0;
+        }
+        return defaultValue != 0;
+    }
+
+    /** 实测电压：average_SV 优先，缺则 (low+high)/2；0 值坏点拦截按整定开关（默认拦截，发现④）。 */
+    private Map<LocalDateTime, BigDecimal> loadMeasured(long busbarNum, LocalDateTime ts, LocalDateTime te, boolean zeroBlock) {
+        List<HisCurveSvRow> rows = sourceReader.fetchCurve(List.of(busbarNum), ts.minusMinutes(2), te.plusMinutes(2), zeroBlock);
         Map<LocalDateTime, BigDecimal> m = new java.util.HashMap<>(rows.size());
         for (HisCurveSvRow r : rows) {
             if (r.busbarNum() != busbarNum) {
@@ -136,7 +150,7 @@ public class Art26ReconcileService {
             LocalDateTime t = SaveTimeParser.parseToMinute(r.saveTimeRaw());
             if (t == null || t.isBefore(ts) || t.isAfter(te)
                     || r.lowSv() == null || r.highSv() == null
-                    || r.lowSv().signum() <= 0 || r.highSv().signum() <= 0) {
+                    || (zeroBlock && (r.lowSv().signum() <= 0 || r.highSv().signum() <= 0))) {
                 continue;
             }
             BigDecimal v = r.averageSv() != null && r.averageSv().signum() > 0

@@ -214,8 +214,6 @@ create table vqms_judge_param (
   constraint ck_value_range check (value_min is null or value_max is null or param_value between value_min and value_max),
   constraint ck_locked_rows check (
     (param_key <> 't_econ' or (param_value <=> 5 and value_min <=> 5 and value_max <=> 5))
-    and (param_key <> 'tier_threshold_fast' or (param_value <=> 1 and value_min <=> 1 and value_max <=> 1))
-    and (param_key <> 'tier_threshold_econ' or (param_value <=> 5 and value_min <=> 5 and value_max <=> 5))
     and (param_key <> 't_fast' or (value_min <=> 1 and value_max <=> 4))
   )
 ) engine=innodb default charset=utf8mb4 collate=utf8mb4_0900_ai_ci comment='VQMS 判定整定参数';
@@ -225,10 +223,12 @@ create table vqms_judge_param (
 insert into vqms_judge_param (param_key, param_value, name, description, value_min, value_max) values
   ('t_fast',              4, '快速性档窗口(分钟)',     '快速性档扫描窗口 [1, t_fast]，整数可整定', 1, 4),
   ('t_econ',              5, '经济性档窗口上限(分钟)', '写死=5（指令 5 分钟间隔），锁定不可改',    5, 5),
-  ('tier_threshold_fast', 1, '快速性档分档阈值(分钟)', '外部依据待确认（附件6 无 5 分钟分档条款）', 1, 1),
-  ('tier_threshold_econ', 5, '经济性档分档阈值(分钟)', '外部依据待确认（附件6 无 5 分钟分档条款）', 5, 5),
+  ('tier_threshold_fast', 1, '快速性档分档阈值(分钟)', '外部依据待确认（附件6 无 5 分钟分档条款）；值域放开界面可整定（2026-09-04 原子化）', 1, 5),
+  ('tier_threshold_econ', 5, '经济性档分档阈值(分钟)', '外部依据待确认（附件6 无 5 分钟分档条款）；值域放开界面可整定（2026-09-04 原子化）', 1, 5),
   ('exempt_q_tol_kvar', 2000, '设备级免考顶满容差(kvar)', '设备Q距极限≤该值视为顶满（附件6§三无ε规定，现场整定）', 0, 100000),
-  ('min_window_completeness_pct', 50, '档窗口最低完整度(%)', 'completeness低于该值的档判INVALID不硬判（数据公平性：缺数窗不罚电厂；1.0数据不可用策略A3/A4最小口径，0=关闭）', 0, 100);
+  ('min_window_completeness_pct', 50, '档窗口最低完整度(%)', 'completeness低于该值的档判INVALID不硬判（数据公平性：缺数窗不罚电厂；1.0数据不可用策略A3/A4最小口径，0=关闭）', 0, 100),
+  ('zero_badpoint_block_enabled', 1, '0值坏点拦截开关', '1=拦截（his_curve_sv high/low任一≤0视为坏点不采信，发现④默认）/ 0=放行采信（核实单§4口径，界面可整定）', 0, 1),
+  ('exempt_review_two_level', 0, '免考复核模式', '0=单账户自批（默认，2026-09-04拍板）/ 1=两级复核（标注人≠复核人校验恢复，核实单§6口径，界面可整定）', 0, 1);
 
 
 -- 7、数据不可用策略参数（原子组合·戊路线唯一实现；Leo 2026-09-02 拍板"完全按照原子性设计实现"）

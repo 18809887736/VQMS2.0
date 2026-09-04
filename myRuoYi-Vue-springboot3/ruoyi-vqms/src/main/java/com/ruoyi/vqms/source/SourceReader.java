@@ -22,7 +22,8 @@ public interface SourceReader {
     List<WarnInfoRow> fetchCommands(LocalDateTime start, LocalDateTime end);
 
     /** 抓取母线电压曲线（指定母线集合，双写去重后）。 */
-    List<HisCurveSvRow> fetchCurve(Collection<Long> busbarNums, LocalDateTime start, LocalDateTime end);
+    List<HisCurveSvRow> fetchCurve(Collection<Long> busbarNums, LocalDateTime start, LocalDateTime end,
+                                   boolean zeroBadpointBlock);
 
     /** 抓取遥测历史（指定点号集合）。 */
     List<YcHistoryRow> fetchYc(Collection<Long> ycNums, LocalDateTime start, LocalDateTime end);

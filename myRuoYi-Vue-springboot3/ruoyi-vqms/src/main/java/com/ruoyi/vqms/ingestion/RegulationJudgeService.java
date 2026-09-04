@@ -127,15 +127,16 @@ public class RegulationJudgeService {
                 VqmsPointConfig.EXEMPT_FLAG, "AUTO_YX 免考链停用，免考走 MANUAL/AUTO_DEVICE");
         BigDecimal qTol = resolveQTol();
         BigDecimal minCompleteness = resolveMinCompleteness();
+        boolean zeroBlock = resolveFlag("zero_badpoint_block_enabled", 1);
         List<VqmsReactiveDevice> loopDevices = loadLoopDevices();
         Map<Long, List<VqmsDevicePqLimit>> pqRows = loadPqRows(loopDevices);
         Map<String, VqmsExemptAnnotation> approved = loadApprovedAnnotations();
-        log.info("判定开始 {}~{} 主体={} tFast={} 主母线={} 实时点={} 免考旗={} qTol={} 完整度闸门τ={} 闭环设备={} 曲线版点数={} 已批标注={}",
+        log.info("判定开始 {}~{} 主体={} tFast={} 主母线={} 实时点={} 免考旗={} qTol={} 完整度闸门τ={} 0值坏点={} 闭环设备={} 曲线版点数={} 已批标注={}",
                 start, end, entityId, tFast, mainBusbar,
                 realtimePoint == null ? "未整定" : realtimePoint,
                 exemptFlagPt == null ? "未整定" : exemptFlagPt,
                 qTol.toPlainString(),
-                minCompleteness == null ? "关闭" : minCompleteness.toPlainString(),
+                minCompleteness == null ? "关闭" : minCompleteness.toPlainString(), zeroBlock ? "拦截" : "放行",
                 loopDevices.size(),
                 pqRows.values().stream().mapToInt(List::size).sum(), approved.size());
 
@@ -154,7 +155,7 @@ public class RegulationJudgeService {
             if (cmds.isEmpty()) {
                 continue;
             }
-            Map<LocalDateTime, Band> curve = loadCurve(mainBusbar, dayStart, dayEnd).bands();
+            Map<LocalDateTime, Band> curve = loadCurve(mainBusbar, dayStart, dayEnd, zeroBlock).bands();
             TreeMap<LocalDateTime, Double> exemptFlag = exemptFlagPt == null
                     ? new TreeMap<>() : loadYc(exemptFlagPt, dayStart, dayEnd);
             TreeMap<LocalDateTime, Double> realtime = realtimePoint == null
@@ -420,9 +421,9 @@ public class RegulationJudgeService {
     private record CurveLoad(Map<LocalDateTime, Band> bands, long dirtyRows) {
     }
 
-    private CurveLoad loadCurve(long busbarNum, LocalDateTime dayStart, LocalDateTime dayEnd) {
+    private CurveLoad loadCurve(long busbarNum, LocalDateTime dayStart, LocalDateTime dayEnd, boolean zeroBlock) {
         List<HisCurveSvRow> rows = sourceReader.fetchCurve(List.of(busbarNum),
-                dayStart.minusMinutes(2), dayEnd.plusMinutes(7));
+                dayStart.minusMinutes(2), dayEnd.plusMinutes(7), zeroBlock);
         Map<LocalDateTime, Band> m = new HashMap<>(rows.size() * 2);
         long dirty = 0;
         for (HisCurveSvRow r : rows) {
@@ -433,7 +434,8 @@ public class RegulationJudgeService {
             if (minute == null || r.lowSv() == null || r.highSv() == null) {
                 continue;
             }
-            Band b = RegulationJudge.sanitizeBand(r.lowSv(), r.highSv());
+            Band b = zeroBlock ? RegulationJudge.sanitizeBand(r.lowSv(), r.highSv())
+                    : new Band(r.lowSv(), r.highSv(), r.lowSv().compareTo(r.highSv()) <= 0);
             if (b == null) {
                 dirty++;
                 continue;
@@ -500,6 +502,17 @@ public class RegulationJudgeService {
             return BigDecimal.valueOf(list.get(0).getParamValue());
         }
         return BigDecimal.ZERO;
+    }
+
+    /** 0/1 开关类整定参数读取（缺行/缺省取 defaultValue；界面可改，核实单口径原子化）。 */
+    private boolean resolveFlag(String key, int defaultValue) {
+        VqmsJudgeParam q = new VqmsJudgeParam();
+        q.setParamKey(key);
+        List<VqmsJudgeParam> list = judgeParamMapper.selectVqmsJudgeParamList(q);
+        if (list != null && !list.isEmpty() && list.get(0).getParamValue() != null) {
+            return list.get(0).getParamValue() != 0;
+        }
+        return defaultValue != 0;
     }
 
     /** 完整度闸门 τ（0~100%，0=关闭；1.0 数据不可用策略 A3/A4 最小口径，运行方可整定）。 */

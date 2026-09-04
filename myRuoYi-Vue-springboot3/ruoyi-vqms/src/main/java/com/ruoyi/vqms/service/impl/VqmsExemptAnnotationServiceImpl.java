@@ -22,6 +22,17 @@ public class VqmsExemptAnnotationServiceImpl implements IVqmsExemptAnnotationSer
     @Autowired
     private VqmsExemptAnnotationMapper vqmsExemptAnnotationMapper;
 
+    @Autowired
+    private com.ruoyi.vqms.mapper.VqmsJudgeParamMapper judgeParamMapper;
+
+    private boolean isTwoLevelReview() {
+        com.ruoyi.vqms.domain.VqmsJudgeParam q = new com.ruoyi.vqms.domain.VqmsJudgeParam();
+        q.setParamKey("exempt_review_two_level");
+        java.util.List<com.ruoyi.vqms.domain.VqmsJudgeParam> list = judgeParamMapper.selectVqmsJudgeParamList(q);
+        return list != null && !list.isEmpty() && list.get(0).getParamValue() != null
+                && list.get(0).getParamValue() == 1;
+    }
+
     /**
      * 查询调节免考标注
      * 
@@ -134,8 +145,8 @@ public class VqmsExemptAnnotationServiceImpl implements IVqmsExemptAnnotationSer
     }
 
     /**
-     * 复核免考标注：仅 PENDING 可复核；
-     * 单人复核口径（Leo 2026-09-04 拍板简化：测试开发阶段允许标注人自批，一人走通全流程）；
+     * 复核免考标注：仅 PENDING 可复核；复核模式界面可整定（原子化，核实单 §6）：
+     * exempt_review_two_level=0 单账户自批（默认，Leo 2026-09-04 拍板）/ =1 两级复核（恢复标注人≠复核人校验）；
      * APPROVED 后由判定重算拾取（MANUAL 免考源，优先级最高）
      */
     @Override
@@ -157,6 +168,10 @@ public class VqmsExemptAnnotationServiceImpl implements IVqmsExemptAnnotationSer
             throw new ServiceException("仅待复核(PENDING)标注可复核，当前状态: " + row.getReviewStatus());
         }
         String reviewer = SecurityUtils.getUsername();
+        if (isTwoLevelReview() && reviewer.equals(row.getCreateBy()))
+        {
+            throw new ServiceException("复核人不能与标注人相同（当前整定：两级复核 exempt_review_two_level=1）");
+        }
         VqmsExemptAnnotation upd = new VqmsExemptAnnotation();
         upd.setAnnotationId(annotation.getAnnotationId());
         upd.setReviewStatus(target);
