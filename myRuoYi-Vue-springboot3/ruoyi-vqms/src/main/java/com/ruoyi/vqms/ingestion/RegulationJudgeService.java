@@ -47,6 +47,7 @@ import com.ruoyi.vqms.statistics.DeviceExemptionJudge.PqPoint;
 import com.ruoyi.vqms.statistics.DeviceExemptionJudge.Verdict;
 import com.ruoyi.vqms.statistics.RegulationJudge;
 import com.ruoyi.vqms.statistics.RegulationJudge.Band;
+import com.ruoyi.vqms.statistics.RegulationJudge.JudgePolicy;
 import com.ruoyi.vqms.statistics.RegulationJudge.Outcome;
 import com.ruoyi.vqms.statistics.SaveTimeParser;
 import com.ruoyi.vqms.statistics.VTargetDecoder;
@@ -125,18 +126,27 @@ public class RegulationJudgeService {
         Long realtimePoint = resolveRealtimePoint(mainBusbar);
         Long exemptFlagPt = pointConfig.optional(pointConfig.loadGatePoints(),
                 VqmsPointConfig.EXEMPT_FLAG, "AUTO_YX 免考链停用，免考走 MANUAL/AUTO_DEVICE");
+        boolean flagMissingAsExempt = resolveInt("exempt_flag_missing_action", 0) == 1;
         BigDecimal qTol = resolveQTol();
         BigDecimal minCompleteness = resolveMinCompleteness();
         boolean zeroBlock = resolveFlag("zero_badpoint_block_enabled", 1);
+        JudgePolicy policy = new JudgePolicy(minCompleteness,
+                resolveInt("undecodable_action", 0),
+                resolveInt("window_missing_action", 0),
+                resolveInt("band_inverted_action", 0));
         List<VqmsReactiveDevice> loopDevices = loadLoopDevices();
         Map<Long, List<VqmsDevicePqLimit>> pqRows = loadPqRows(loopDevices);
         Map<String, VqmsExemptAnnotation> approved = loadApprovedAnnotations();
-        log.info("判定开始 {}~{} 主体={} tFast={} 主母线={} 实时点={} 免考旗={} qTol={} 完整度闸门τ={} 0值坏点={} 闭环设备={} 曲线版点数={} 已批标注={}",
+        log.info("判定开始 {}~{} 主体={} tFast={} 主母线={} 实时点={} 免考旗={} qTol={} 完整度闸门τ={} 0值坏点={} 处置[A1解码={},A2全缺={},A2L>H={},A5旗无源={}] 闭环设备={} 曲线版点数={} 已批标注={}",
                 start, end, entityId, tFast, mainBusbar,
                 realtimePoint == null ? "未整定" : realtimePoint,
                 exemptFlagPt == null ? "未整定" : exemptFlagPt,
                 qTol.toPlainString(),
                 minCompleteness == null ? "关闭" : minCompleteness.toPlainString(), zeroBlock ? "拦截" : "放行",
+                policy.undecodableAction() == 1 ? "计不合格" : "剔除",
+                policy.windowMissingAction() == 1 ? "计不合格" : "剔除",
+                policy.bandInvertedAction() == 1 ? "计不合格" : "剔除",
+                flagMissingAsExempt ? "视为免考" : "照罚",
                 loopDevices.size(),
                 pqRows.values().stream().mapToInt(List::size).sum(), approved.size());
 
@@ -156,6 +166,7 @@ public class RegulationJudgeService {
                 continue;
             }
             Map<LocalDateTime, Band> curve = loadCurve(mainBusbar, dayStart, dayEnd, zeroBlock).bands();
+            // A5 免考旗无源处置：0=照罚（默认，AUTO_YX 链停用）/ 1=视为免考（从宽，慎用）
             TreeMap<LocalDateTime, Double> exemptFlag = exemptFlagPt == null
                     ? new TreeMap<>() : loadYc(exemptFlagPt, dayStart, dayEnd);
             TreeMap<LocalDateTime, Double> realtime = realtimePoint == null
@@ -164,7 +175,7 @@ public class RegulationJudgeService {
                     resolveCurves(pqRows, d), loadDeviceYc(loopDevices, dayStart, dayEnd), approved);
 
             for (VqmsCommandLedger cmd : cmds) {
-                VqmsRegulationCmd row = judgeOne(cmd, curve, exemptFlag, realtime, tFast, ctx, counts);
+                VqmsRegulationCmd row = judgeOne(cmd, curve, exemptFlag, realtime, tFast, ctx, policy, flagMissingAsExempt, counts);
                 buffer.add(row);
                 if (buffer.size() >= BATCH_SIZE) {
                     regulationCmdMapper.upsertBatch(new ArrayList<>(buffer));
@@ -186,16 +197,26 @@ public class RegulationJudgeService {
     private VqmsRegulationCmd judgeOne(VqmsCommandLedger cmd, Map<LocalDateTime, Band> curve,
                                        TreeMap<LocalDateTime, Double> exemptFlag,
                                        TreeMap<LocalDateTime, Double> realtime, int tFast,
-                                       DayContext ctx, Map<String, Long> counts) {
+                                       DayContext ctx, JudgePolicy policy, boolean flagMissingAsExempt,
+                                       Map<String, Long> counts) {
         LocalDateTime t0 = cmd.getCmdTime();
         BigDecimal rtKv = realtimeAt(realtime, t0);
         BigDecimal targetKv = VTargetDecoder.decodeAny(cmd.getWarnContent(), rtKv);
 
         // 原始判定不进免考旗：三源免考链在编排层逐档套用（PEN → EXEMPTED 的翻转规则与纯函数一致）
-        Outcome o = RegulationJudge.judge(targetKv, curve, t0, tFast, T_ECON, false, false,
-                ctx.minCompleteness());
+        boolean exFast = exemptFlagPtMissing(exemptFlag) && flagMissingAsExempt
+                || flagAt(exemptFlag, t0.plusMinutes(tFast));
+        boolean exEcon = exemptFlagPtMissing(exemptFlag) && flagMissingAsExempt
+                || flagAt(exemptFlag, t0.plusMinutes(T_ECON + 1));
+        Outcome o = RegulationJudge.judge(targetKv, curve, t0, tFast, T_ECON, false, false, policy);
         String fastState = o.fastState();
+        if (RegulationJudge.PENALIZED.equals(fastState) && exFast) {
+            fastState = RegulationJudge.EXEMPTED;
+        }
         String econState = o.econState();
+        if (RegulationJudge.PENALIZED.equals(econState) && exEcon) {
+            econState = RegulationJudge.EXEMPTED;
+        }
         String srcFast = null;
         String srcEcon = null;
         Long refFast = null;
@@ -502,6 +523,22 @@ public class RegulationJudgeService {
             return BigDecimal.valueOf(list.get(0).getParamValue());
         }
         return BigDecimal.ZERO;
+    }
+
+    /** 免考旗整日无任何采样值 = 无源（A5）。 */
+    private static boolean exemptFlagPtMissing(TreeMap<LocalDateTime, Double> m) {
+        return m.isEmpty();
+    }
+
+    /** 整数开关类参数读取（缺行/缺省取 defaultValue）。 */
+    private int resolveInt(String key, int defaultValue) {
+        VqmsJudgeParam q = new VqmsJudgeParam();
+        q.setParamKey(key);
+        List<VqmsJudgeParam> list = judgeParamMapper.selectVqmsJudgeParamList(q);
+        if (list != null && !list.isEmpty() && list.get(0).getParamValue() != null) {
+            return list.get(0).getParamValue().intValue();
+        }
+        return defaultValue;
     }
 
     /** 0/1 开关类整定参数读取（缺行/缺省取 defaultValue；界面可改，核实单口径原子化）。 */

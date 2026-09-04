@@ -25,6 +25,25 @@ public final class RegulationJudge {
     public static final String EXEMPTED = "EXEMPTED";
     public static final String INVALID = "INVALID";
 
+    /**
+     * 数据不可用处置策略（原子化，界面可整定，核实单口径族）：
+     * 每类失效独立处置——0=剔除分母（INVALID，保守不罚）/ 1=计不合格（PENALIZED，倒逼数据质量）。
+     * A3/A4（部分缺/完整度）由 minCompleteness τ 闸门承载（独立参数）。
+     */
+    public record JudgePolicy(BigDecimal minCompleteness,
+                              int undecodableAction,      // A1 解码失败（A1a/A1b/A1c 合并）
+                              int windowMissingAction,    // A2 窗口全缺
+                              int bandInvertedAction      // A2 窗口存在 low>high 异常行
+    ) {
+        public static JudgePolicy defaults() {
+            return new JudgePolicy(null, 0, 0, 0);
+        }
+
+        static JudgePolicy withTau(BigDecimal tau) {
+            return new JudgePolicy(tau, 0, 0, 0);
+        }
+    }
+
     /** 单分钟电压带（kV）。valid=false 表示该行 low>high 异常。 */
     public record Band(BigDecimal low, BigDecimal high, boolean valid) {
     }
@@ -69,8 +88,16 @@ public final class RegulationJudge {
      */
     public static Outcome judge(BigDecimal targetKv, Map<LocalDateTime, Band> curve,
                                 LocalDateTime t0, int tFast, int tEcon,
+                                boolean exemptFast, boolean exemptEcon, BigDecimal minCompleteness) {
+        return judge(targetKv, curve, t0, tFast, tEcon, exemptFast, exemptEcon,
+                JudgePolicy.withTau(minCompleteness));
+    }
+
+    /** 兼容默认策略（全部剔除分母、τ 关闭）。 */
+    public static Outcome judge(BigDecimal targetKv, Map<LocalDateTime, Band> curve,
+                                LocalDateTime t0, int tFast, int tEcon,
                                 boolean exemptFast, boolean exemptEcon) {
-        return judge(targetKv, curve, t0, tFast, tEcon, exemptFast, exemptEcon, null);
+        return judge(targetKv, curve, t0, tFast, tEcon, exemptFast, exemptEcon, JudgePolicy.defaults());
     }
 
     /**
@@ -82,12 +109,14 @@ public final class RegulationJudge {
      */
     public static Outcome judge(BigDecimal targetKv, Map<LocalDateTime, Band> curve,
                                 LocalDateTime t0, int tFast, int tEcon,
-                                boolean exemptFast, boolean exemptEcon, BigDecimal minCompleteness) {
+                                boolean exemptFast, boolean exemptEcon, JudgePolicy policy) {
         if (targetKv == null) {
-            return new Outcome(INVALID, INVALID, BigDecimal.ZERO, BigDecimal.ZERO, "FAST,ECON");
+            // A1 解码失败处置：0=INVALID 剔除分母（默认）/ 1=PENALIZED 计不合格
+            String st = policy.undecodableAction() == 1 ? PENALIZED : INVALID;
+            return new Outcome(st, st, BigDecimal.ZERO, BigDecimal.ZERO, INVALID.equals(st) ? "FAST,ECON" : null);
         }
-        TierResult fast = judgeTier(targetKv, curve, t0.plusMinutes(1), t0.plusMinutes(tFast), minCompleteness);
-        TierResult econ = judgeTier(targetKv, curve, t0.plusMinutes(tFast + 1), t0.plusMinutes(tEcon), minCompleteness);
+        TierResult fast = judgeTier(targetKv, curve, t0.plusMinutes(1), t0.plusMinutes(tFast), policy);
+        TierResult econ = judgeTier(targetKv, curve, t0.plusMinutes(tFast + 1), t0.plusMinutes(tEcon), policy);
 
         String fastState = fast.state();
         if (PENALIZED.equals(fastState) && exemptFast) {
@@ -98,11 +127,12 @@ public final class RegulationJudge {
             econState = EXEMPTED;
         }
         String invalidTiers = null;
-        if (fast.invalid && econ.invalid) {
+        // invalidTiers 只标 INVALID 状态的档（处置=计不合格时不是"无效"，不标）
+        if (INVALID.equals(fastState) && INVALID.equals(econState)) {
             invalidTiers = "FAST,ECON";
-        } else if (fast.invalid) {
+        } else if (INVALID.equals(fastState)) {
             invalidTiers = "FAST";
-        } else if (econ.invalid) {
+        } else if (INVALID.equals(econState)) {
             invalidTiers = "ECON";
         }
         return new Outcome(fastState, econState, fast.completeness, econ.completeness, invalidTiers);
@@ -112,7 +142,7 @@ public final class RegulationJudge {
     }
 
     private static TierResult judgeTier(BigDecimal targetKv, Map<LocalDateTime, Band> curve,
-                                        LocalDateTime from, LocalDateTime to, BigDecimal minCompleteness) {
+                                        LocalDateTime from, LocalDateTime to, JudgePolicy policy) {
         long total = java.time.Duration.between(from, to).toMinutes() + 1;
         List<Band> bands = new ArrayList<>();
         for (LocalDateTime m = from; !m.isAfter(to); m = m.plusMinutes(1)) {
@@ -122,14 +152,18 @@ public final class RegulationJudge {
             }
         }
         if (bands.isEmpty()) {
-            return new TierResult(INVALID, BigDecimal.ZERO, true);
+            // A2 窗口全缺处置：0=INVALID 剔除（默认）/ 1=PENALIZED 计不合格
+            return new TierResult(policy.windowMissingAction() == 1 ? PENALIZED : INVALID,
+                    BigDecimal.ZERO, true);
         }
-        // 窗口存在 low>high 异常行 → 该档无效（S16 口径）
+        // 窗口存在 low>high 异常行 → 处置：0=该档 INVALID 剔除（S16 默认）/ 1=PENALIZED 计不合格
         if (bands.stream().anyMatch(b -> !b.valid())) {
-            return new TierResult(INVALID, completenessOf(bands.size(), total), true);
+            return new TierResult(policy.bandInvertedAction() == 1 ? PENALIZED : INVALID,
+                    completenessOf(bands.size(), total), true);
         }
         // 完整度闸门（A3/A4 最小口径）：可用度 < τ 的窗口不硬判——缺数缺出来的"不合格"不是电厂责任
         BigDecimal completeness = completenessOf(bands.size(), total);
+        BigDecimal minCompleteness = policy.minCompleteness();
         if (minCompleteness != null && minCompleteness.signum() > 0
                 && completeness.compareTo(minCompleteness) < 0) {
             return new TierResult(INVALID, completeness, true);

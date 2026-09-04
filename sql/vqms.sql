@@ -228,7 +228,11 @@ insert into vqms_judge_param (param_key, param_value, name, description, value_m
   ('exempt_q_tol_kvar', 2000, '设备级免考顶满容差(kvar)', '设备Q距极限≤该值视为顶满（附件6§三无ε规定，现场整定）', 0, 100000),
   ('min_window_completeness_pct', 50, '档窗口最低完整度(%)', 'completeness低于该值的档判INVALID不硬判（数据公平性：缺数窗不罚电厂；1.0数据不可用策略A3/A4最小口径，0=关闭）', 0, 100),
   ('zero_badpoint_block_enabled', 1, '0值坏点拦截开关', '1=拦截（his_curve_sv high/low任一≤0视为坏点不采信，发现④默认）/ 0=放行采信（核实单§4口径，界面可整定）', 0, 1),
-  ('exempt_review_two_level', 0, '免考复核模式', '0=单账户自批（默认，2026-09-04拍板）/ 1=两级复核（标注人≠复核人校验恢复，核实单§6口径，界面可整定）', 0, 1);
+  ('exempt_review_two_level', 0, '免考复核模式', '0=单账户自批（默认，2026-09-04拍板）/ 1=两级复核（标注人≠复核人校验恢复，核实单§6口径，界面可整定）', 0, 1),
+  ('undecodable_action', 0, '解码失败处置(A1)', '0=剔除分母INVALID（默认，保守不罚）/ 1=计不合格PENALIZED（倒逼数据质量）；1.0数据不可用策略原子化', 0, 1),
+  ('window_missing_action', 0, '整窗缺处置(A2)', '0=剔除分母INVALID（默认）/ 1=计不合格PENALIZED', 0, 1),
+  ('band_inverted_action', 0, 'L>H异常行处置(A2)', '0=该档剔除INVALID（默认，S16口径）/ 1=计不合格PENALIZED', 0, 1),
+  ('exempt_flag_missing_action', 0, '免考旗无源处置(A5)', '0=照罚（默认，AUTO_YX链停用走MANUAL/AUTO_DEVICE）/ 1=视为免考（从宽，慎用）', 0, 1);
 
 
 -- 7、数据不可用策略参数（原子组合·戊路线唯一实现；Leo 2026-09-02 拍板"完全按照原子性设计实现"）

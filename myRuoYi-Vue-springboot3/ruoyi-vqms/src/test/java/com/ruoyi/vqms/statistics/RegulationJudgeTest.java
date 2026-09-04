@@ -216,4 +216,40 @@ class RegulationJudgeTest {
         assertEquals("PENALIZED",
                 RegulationJudge.judge(BigDecimal.valueOf(223.15), c, T0, 4, 5, false, false).fastState());
     }
+
+    // ────────────────── 数据不可用处置原子开关（JudgePolicy）──────────────────
+
+    @Test
+    void policy_undecodableAsPenalized() {
+        Map<LocalDateTime, Band> c = curve(222, 224, 222, 224, 222, 224, 222, 224, 222, 224);
+        assertEquals("INVALID", RegulationJudge.judge(null, c, T0, 4, 5, false, false,
+                new RegulationJudge.JudgePolicy(null, 0, 0, 0)).fastState());
+        assertEquals("PENALIZED", RegulationJudge.judge(null, c, T0, 4, 5, false, false,
+                new RegulationJudge.JudgePolicy(null, 1, 0, 0)).fastState());
+    }
+
+    @Test
+    void policy_windowMissingAsPenalized() {
+        Map<LocalDateTime, Band> c = new HashMap<>();
+        c.put(T0.plusMinutes(5), band(222, 224));
+        assertEquals("INVALID", RegulationJudge.judge(BigDecimal.valueOf(223.15), c, T0, 4, 5, false, false,
+                new RegulationJudge.JudgePolicy(null, 0, 0, 0)).fastState());
+        assertEquals("PENALIZED", RegulationJudge.judge(BigDecimal.valueOf(223.15), c, T0, 4, 5, false, false,
+                new RegulationJudge.JudgePolicy(null, 0, 1, 0)).fastState());
+    }
+
+    @Test
+    void policy_bandInvertedAsPenalized() {
+        Map<LocalDateTime, Band> c = new HashMap<>();
+        c.put(T0.plusMinutes(1), band(226, 224));
+        c.put(T0.plusMinutes(2), band(222, 224));
+        c.put(T0.plusMinutes(3), band(222, 224));
+        c.put(T0.plusMinutes(4), band(222, 224));
+        c.put(T0.plusMinutes(5), band(222, 224));
+        assertEquals("INVALID", RegulationJudge.judge(BigDecimal.valueOf(223.15), c, T0, 4, 5, false, false,
+                new RegulationJudge.JudgePolicy(null, 0, 0, 0)).fastState());
+        assertEquals("PENALIZED", RegulationJudge.judge(BigDecimal.valueOf(223.15), c, T0, 4, 5, false, false,
+                new RegulationJudge.JudgePolicy(null, 0, 0, 1)).fastState());
+    }
+
 }
