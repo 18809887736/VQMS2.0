@@ -134,7 +134,8 @@ public class VqmsExemptAnnotationServiceImpl implements IVqmsExemptAnnotationSer
     }
 
     /**
-     * 复核免考标注：仅 PENDING 可复核；复核人 ≠ 标注人（两级复核，拍板⑤）；
+     * 复核免考标注：仅 PENDING 可复核；
+     * 单人复核口径（Leo 2026-09-04 拍板简化：测试开发阶段允许标注人自批，一人走通全流程）；
      * APPROVED 后由判定重算拾取（MANUAL 免考源，优先级最高）
      */
     @Override
@@ -156,10 +157,6 @@ public class VqmsExemptAnnotationServiceImpl implements IVqmsExemptAnnotationSer
             throw new ServiceException("仅待复核(PENDING)标注可复核，当前状态: " + row.getReviewStatus());
         }
         String reviewer = SecurityUtils.getUsername();
-        if (reviewer.equals(row.getCreateBy()))
-        {
-            throw new ServiceException("复核人不能与标注人相同（两级复核）");
-        }
         VqmsExemptAnnotation upd = new VqmsExemptAnnotation();
         upd.setAnnotationId(annotation.getAnnotationId());
         upd.setReviewStatus(target);

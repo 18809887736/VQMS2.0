@@ -6,14 +6,14 @@
 --   ② 统计粒度合一（stat_grain D/M/Y + stat_period DATE + entity 唯一键）
 --   ③ Phase 2（第26条电压考核/第27条SVG-SVC/有偿无功）等 Phase 1 跑通再建
 --   ④ entity 容量 600000 kW 种入、待现场核实
---   ⑤ 免考人工标注两级复核（PENDING→APPROVED 生效，标注人≠复核人）
+--   ⑤ 免考人工标注复核（PENDING→APPROVED 生效；单账户自批——Leo 2026-09-04 拍板简化）
 --
 -- 相对 VQMS 1.0（C:\work\VQMS\sql\vqms.sql）的关键变更：
 --   * 新增主体维度 vqms_entity（考核基数载体），容量从 busbar_group 上移
 --   * 统计三粒度三表合一为 vqms_regulation_stats / vqms_runtime_stats
 --   * ledger/cmd 增 cmd_time datetime 解析列（保留原文列作溯源键）
 --   * 解码算法版本化 ROT10_V1（轮转码{1,2,3}+÷10；1.0 的 ÷100 已被现场核对证伪）
---   * 删 yx501 依赖：免考改三源（AUTO_YX/AUTO_DEVICE/MANUAL）+ 两级复核标注表
+--   * 删 yx501 依赖：免考改三源（AUTO_YX/AUTO_DEVICE/MANUAL）+ 人工复核标注表
 --   * 新增投运率退出原因标注表（yc521/522 落盘前的人工路径）
 --   * 新增无功设备台账 + P-Q 极限曲线（附件6§三 设备级免考判定）
 --   * 新增摄取批次日志（数据质量闸门留痕）
@@ -315,10 +315,10 @@ create table vqms_regulation_cmd (
 
 
 -- ============================================================
--- 四、人工标注（两级复核）
+-- 四、人工标注（复核生效）
 -- ============================================================
 
--- 10、调节免考人工标注（拍板⑤：两级复核，重算只应用 APPROVED 行）
+-- 10、调节免考人工标注（拍板⑤原为两级复核；2026-09-04 Leo 简化为单账户自批，重算只应用 APPROVED 行）
 drop table if exists vqms_exempt_annotation;
 create table vqms_exempt_annotation (
   annotation_id  bigint       not null auto_increment comment '主键',
@@ -330,7 +330,7 @@ create table vqms_exempt_annotation (
   exempt_reason  varchar(255) not null                comment '免考依据（附件6§三：全部闭环无功设备正确方向顶满仍不达标 等）',
   evidence       varchar(512) default null            comment '佐证材料描述（设备Q曲线截图/调度电话记录等）',
   review_status  varchar(16)  not null default 'PENDING' comment '复核状态：PENDING=待复核 / APPROVED=已批准（生效） / REJECTED=已驳回',
-  review_by      varchar(64)  default null            comment '复核人（≠标注人，Service 层校验）',
+  review_by      varchar(64)  default null            comment '复核人（单账户口径：标注人可自批，2026-09-04 拍板简化）',
   review_time    datetime     default null            comment '复核时间',
   review_opinion varchar(255) default null            comment '复核意见（驳回原因等）',
   status         char(1)      not null default '0'    comment '状态：0=有效, 1=撤销',
@@ -342,7 +342,7 @@ create table vqms_exempt_annotation (
   primary key (annotation_id),
   key idx_cmd (warn_time_raw, obj_num),
   key idx_review (review_status, entity_id)
-) engine=innodb default charset=utf8mb4 collate=utf8mb4_0900_ai_ci comment='VQMS 调节免考人工标注（两级复核生效）';
+) engine=innodb default charset=utf8mb4 collate=utf8mb4_0900_ai_ci comment='VQMS 调节免考人工标注（复核生效；单账户口径）';
 
 
 -- 11、AVC 退出原因标注（投运率免责输入；yc521/522 落盘前以人工为主）

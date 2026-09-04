@@ -97,7 +97,7 @@
             size="mini"
             type="text"
             icon="el-icon-check"
-            v-if="scope.row.reviewStatus === 'PENDING' && !isOwnRow(scope.row)"
+            v-if="scope.row.reviewStatus === 'PENDING'"
             @click="handleApprove(scope.row)"
             v-hasPermi="['vqms:exemptAnnotation:edit']"
           >批准</el-button>
@@ -105,7 +105,7 @@
             size="mini"
             type="text"
             icon="el-icon-close"
-            v-if="scope.row.reviewStatus === 'PENDING' && !isOwnRow(scope.row)"
+            v-if="scope.row.reviewStatus === 'PENDING'"
             @click="handleReject(scope.row)"
             v-hasPermi="['vqms:exemptAnnotation:edit']"
           >驳回</el-button>
@@ -224,11 +224,6 @@ export default {
       }
     }
   },
-  computed: {
-    currentUser() {
-      return this.$store.state.user.name
-    }
-  },
   created() {
     this.getList()
   },
@@ -242,10 +237,7 @@ export default {
         this.loading = false
       })
     },
-    // 两级复核：标注人不能复核自己的标注
-    isOwnRow(row) {
-      return row.createBy === this.currentUser
-    },
+    // 单账户复核（Leo 2026-09-04 拍板简化：标注人可自批，一人走通全流程）
     // 取消按钮
     cancel() {
       this.open = false
