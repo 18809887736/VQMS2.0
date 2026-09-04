@@ -30,6 +30,13 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- 对端 AVC 配置库（SQLite）整定解析，界面版工具 -->
+        <dependency>
+            <groupId>org.xerial</groupId>
+            <artifactId>sqlite-jdbc</artifactId>
+            <version>3.46.1.0</version>
+        </dependency>
+
     </dependencies>
 
 </project>
