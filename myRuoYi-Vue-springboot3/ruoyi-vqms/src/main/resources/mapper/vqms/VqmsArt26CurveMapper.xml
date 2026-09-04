@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.vqms.mapper.VqmsArt26CurveMapper">
+
+    <resultMap type="com.ruoyi.vqms.domain.VqmsArt26Curve" id="VqmsArt26CurveResult">
+        <result property="curveId"      column="curve_id"/>
+        <result property="busbarNum"    column="busbar_num"/>
+        <result property="quarter"      column="quarter"/>
+        <result property="periodStart"  column="period_start"/>
+        <result property="periodEnd"    column="period_end"/>
+        <result property="limitUpKv"    column="limit_up_kv"/>
+        <result property="limitDownKv"  column="limit_down_kv"/>
+        <result property="source"       column="source"/>
+        <result property="createBy"     column="create_by"/>
+        <result property="createTime"   column="create_time"/>
+        <result property="updateBy"     column="update_by"/>
+        <result property="updateTime"   column="update_time"/>
+        <result property="remark"       column="remark"/>
+    </resultMap>
+
+    <sql id="selectVo">
+        select curve_id, busbar_num, quarter, period_start, period_end, limit_up_kv, limit_down_kv, source, create_by, create_time, update_by, update_time, remark from vqms_art26_curve
+    </sql>
+
+    <select id="selectVqmsArt26CurveById" parameterType="Long" resultMap="VqmsArt26CurveResult">
+        <include refid="selectVo"/>
+        where curve_id = #{curveId}
+    </select>
+
+    <select id="selectByBusbarQuarter" parameterType="com.ruoyi.vqms.domain.VqmsArt26Curve" resultMap="VqmsArt26CurveResult">
+        <include refid="selectVo"/>
+        where busbar_num = #{busbarNum} and quarter = #{quarter}
+        order by period_start
+    </select>
+
+    <insert id="insertVqmsArt26Curve" parameterType="com.ruoyi.vqms.domain.VqmsArt26Curve" useGeneratedKeys="true" keyProperty="curveId">
+        insert into vqms_art26_curve
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="busbarNum != null">busbar_num,</if>
+            <if test="quarter != null and quarter != ''">quarter,</if>
+            <if test="periodStart != null">period_start,</if>
+            <if test="periodEnd != null">period_end,</if>
+            <if test="limitUpKv != null">limit_up_kv,</if>
+            <if test="limitDownKv != null">limit_down_kv,</if>
+            <if test="source != null">source,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="remark != null">remark,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="busbarNum != null">#{busbarNum},</if>
+            <if test="quarter != null and quarter != ''">#{quarter},</if>
+            <if test="periodStart != null">#{periodStart},</if>
+            <if test="periodEnd != null">#{periodEnd},</if>
+            <if test="limitUpKv != null">#{limitUpKv},</if>
+            <if test="limitDownKv != null">#{limitDownKv},</if>
+            <if test="source != null">#{source},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="remark != null">#{remark},</if>
+         </trim>
+    </insert>
+
+    <update id="updateVqmsArt26Curve" parameterType="com.ruoyi.vqms.domain.VqmsArt26Curve">
+        update vqms_art26_curve
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="busbarNum != null">busbar_num = #{busbarNum},</if>
+            <if test="quarter != null and quarter != ''">quarter = #{quarter},</if>
+            <if test="periodStart != null">period_start = #{periodStart},</if>
+            <if test="periodEnd != null">period_end = #{periodEnd},</if>
+            <if test="limitUpKv != null">limit_up_kv = #{limitUpKv},</if>
+            <if test="limitDownKv != null">limit_down_kv = #{limitDownKv},</if>
+            <if test="source != null">source = #{source},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="remark != null">remark = #{remark},</if>
+        </trim>
+        where curve_id = #{curveId}
+    </update>
+
+    <delete id="deleteVqmsArt26CurveByIds" parameterType="String">
+        delete from vqms_art26_curve where curve_id in
+        <foreach item="curveId" collection="array" open="(" separator="," close=")">
+            #{curveId}
+        </foreach>
+    </delete>
+</mapper>
