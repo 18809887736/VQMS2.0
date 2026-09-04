@@ -63,6 +63,12 @@ VQMS (Voltage Quality Management System) is an AVC bus-voltage quality monitorin
 - 第 27 条 SVG/SVC/调相机 / Art. 27 SVG/SVC/synchronous condenser：投入自动可用率 99%，每降 1pp 月考 0.1 分/万千瓦 / auto-availability 99%, 0.1 point per MW per missing pp monthly（风光储 6 个月过渡期 / 6-month grace period for renewables & storage）
 - 辅助服务细则 / Ancillary-services rules：基本无功 / basic reactive = 迟相 PF≥0.85 发出 / inject at lagging PF≥0.85、进相 PF≥0.97 吸收 / absorb at leading PF≥0.97（义务 / obligatory）；有偿无功 300 元/万千乏时 / paid reactive 300 CNY per 10⁴ kvar·h
 
+## 测试号段与工具 / Test Band & Tools
+
+- **测试号段 4000+（Leo 2026-09-04 拍板）**：测试开发阶段信号点号全部 VQMS 自定统一 4000+ 段（4001-4004 母线号/实时电压/总有功、4005/4006 并网编码、4007 AVC投退、4008/4009 退因、4010 免考旗、4011-4014 设备P/Q、4020 远方就地）——号源唯一 `tools/avc-data-gen/config/points.yaml`（生成器全参数化无硬编码）；现场接入按对端落盘实际号 UPDATE 注册表/台账换号，不改代码 / All signal points self-defined in the 4000+ band for the test stage; the single source is points.yaml — swap numbers via registry UPDATE when the field connects, never code
+- **工具链**：`tools/avc-data-gen` 造数器+manifest oracle（`range` 命令出数据集）；`tools/replay` 回放 harness（7 断言，全链等价验证基线：60698 令/免考 YX211+DEV4/INVALID 5+35）；`tools/avc-tuning` 对端配置库整定（QHeatAvcRtdb.db → diff 报告 + 幂等 migration，人工审后执行） / generator with manifest oracle, replay harness with 7 assertions, config-db tuning tool
+- **对外文档**：`docs/对外/` 两份（致对端点号落盘需求、致监管运行方口径核实单含 §7 配置库上传）——发出后等外部回复解锁主题 6/8 / two external checklists pending dispatch
+
 ## 注意事项 / Notes
 
 - 实现口径一律以 **2024 版**细则为准（2020 版旧文件已从仓库移除 / always implement against the 2024 edition; the 2020-edition files were removed from the repo）
