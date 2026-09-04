@@ -25,7 +25,7 @@ def _h(*seeds: int, mod: int) -> int:
 
 
 def emit_background_rows(day_idx: int, day: datetime, occupied: dict, is_scenario_day: bool = False,
-                         scenario_points: set | None = None) -> dict[str, list[dict]]:
+                         scenario_points: set | None = None, points: dict | None = None) -> dict[str, list[dict]]:
     """生成 day（00:00~23:59）背景三表行。
 
     occupied: {"curve": {(busbar, minute_dt)}, "cmd": {(warn_time_str, obj)},
@@ -95,30 +95,32 @@ def emit_background_rows(day_idx: int, day: datetime, occupied: dict, is_scenari
             continue
         t = day0 + timedelta(minutes=minute)
         ytime = format_yc_time(t)
+        # 点号全部走 points.yaml（4000+ 测试号段，现场换号只改配置）
         values = {
-            4001: 0,                                     # 主母线号（0=东）
-            4002: round(v_base + _h(day_idx, minute, 5, mod=5) * 0.1 - 0.2, 2),
-            4003: round(v_base + _h(day_idx, minute, 6, mod=5) * 0.1 - 0.2, 2),
-            4004: 114800 + _h(day_idx, minute, 7, mod=40) * 250,        # 有功波动 ±5000kW 内
-            511: 11, 512: 11,                            # 并网编码：带电1×10+机数1
-            521: 0, 522: 0,                              # 退出原因：未退出
-            2003: 1,                                     # 远方
-            3009: 1,                                     # AVC 投入（背景默认投运）
-            501: 0,                                      # 免考旗：未顶满
-            # 设备级 P/Q（vqms_reactive_device：GEN_01 216/217、GEN_02 316/317）
-            # 背景永远中段运行（远离曲线极限），设备级免考判定不触发——顶满语义只由 S20+ 场景构造
-            216: 57400 + _h(day_idx, minute, 8, mod=5) * 100,   # 单机有功 ≈57.4MW（双机≈114800 对应 4004）
-            217: 20000 + _h(day_idx, minute, 9, mod=21) * 1000, # 单机无功 2~4万 kvar（极限≈24万，差一个数量级）
-            316: 57400 + _h(day_idx, minute, 10, mod=5) * 100,
-            317: 20000 + _h(day_idx, minute, 11, mod=21) * 1000,
+            points["main_busbar_num"]: 0,              # 主母线号（0=东）
+            points["realtime_v_busbar0"]: round(v_base + _h(day_idx, minute, 5, mod=5) * 0.1 - 0.2, 2),
+            points["realtime_v_busbar1"]: round(v_base + _h(day_idx, minute, 6, mod=5) * 0.1 - 0.2, 2),
+            points["active_power"]: 114800 + _h(day_idx, minute, 7, mod=40) * 250,  # 有功波动 ±5000kW 内
+            points["grid_signal_main"]: 11,            # 并网编码：带电1×10+机数1
+            points["grid_signal_aux"]: 11,
+            points["exit_reason_main"]: 0,             # 退出原因：未退出
+            points["exit_reason_aux"]: 0,
+            points["remote_local"]: 1,                 # 远方
+            points["avc_onoff"]: 1,                    # AVC 投入（背景默认投运）
+            points["exempt_flag"]: 0,                  # 免考旗：未顶满
+            # 设备级 P/Q：背景永远中段运行（远离曲线极限），设备级免考判定不触发——顶满语义只由 S20+ 场景构造
+            points["p_gen1"]: 57400 + _h(day_idx, minute, 8, mod=5) * 100,    # 单机有功 ≈57.4MW（双机≈114800 对应总有功）
+            points["q_gen1"]: 20000 + _h(day_idx, minute, 9, mod=21) * 1000,  # 单机无功 2~4万 kvar（极限≈24万，差一个数量级）
+            points["p_gen2"]: 57400 + _h(day_idx, minute, 10, mod=5) * 100,
+            points["q_gen2"]: 20000 + _h(day_idx, minute, 11, mod=21) * 1000,
         }
         step_owned = scenario_points or set()
         if is_scenario_day:
             # 阶跃保持类信号（AVC投退/退出原因/免考旗）：仅当场景自带时间线时由场景独占
-            # （U 场景日；S 场景日不写 3009，背景照常补写保持全天投运）
-            for step_pt in (3009, 521, 522, 501):
-                if step_pt in step_owned:
-                    values.pop(step_pt, None)
+            # （U 场景日；S 场景日不写投退，背景照常补写保持全天投运）
+            for k in ("avc_onoff", "exit_reason_main", "exit_reason_aux", "exempt_flag"):
+                if points[k] in step_owned:
+                    values.pop(points[k], None)
         for yc_num, val in values.items():
             if (yc_num, t) in occupied["yc"]:
                 continue

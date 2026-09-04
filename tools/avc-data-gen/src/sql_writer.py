@@ -101,7 +101,7 @@ def write_bundle_sql(bundle: ScenarioBundle, path: Path, *, include_header: bool
         parts.append("")
     parts.append(_emit_insert("his_curve_sv", emit_his_curve_sv_rows(bundle)))
     parts.append(_emit_insert("warn_info", emit_warn_info_rows(bundle)))
-    parts.append(_emit_insert("yc_history", emit_yc_history_rows(bundle)))
+    parts.append(_emit_insert("yc_history", emit_yc_history_rows(bundle, exempt_point=(points or {}).get("exempt_flag", 501))))
     path.write_text("\n".join(parts), encoding="utf-8")
 
 
@@ -113,6 +113,6 @@ def write_bundled_sql(bundles: list[ScenarioBundle], path: Path, *,
         parts.append(f"-- ===== 场景 {b.scenario_id}: {b.description} =====")
         parts.append(_emit_insert("his_curve_sv", emit_his_curve_sv_rows(b)))
         parts.append(_emit_insert("warn_info", emit_warn_info_rows(b)))
-        parts.append(_emit_insert("yc_history", emit_yc_history_rows(b)))
+        parts.append(_emit_insert("yc_history", emit_yc_history_rows(b, exempt_point=(points or {}).get("exempt_flag", 501))))
         parts.append("")
     path.write_text("\n".join(parts), encoding="utf-8")

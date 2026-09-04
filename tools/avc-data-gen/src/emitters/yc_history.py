@@ -10,7 +10,7 @@ from ..scenarios.base import ScenarioBundle
 from ..timeutil import jitter_save_time, format_yc_time
 
 
-def emit_yc_history_rows(bundle: ScenarioBundle) -> list[dict]:
+def emit_yc_history_rows(bundle: ScenarioBundle, exempt_point: int = 501) -> list[dict]:
     rows = []
     seen = set()  # (yc_num, yc_time) 去重，守 UNIQUE 约束
     for yp in bundle.yc_points:
@@ -24,8 +24,8 @@ def emit_yc_history_rows(bundle: ScenarioBundle) -> list[dict]:
             "yc_time": format_yc_time(raw),  # 写入 jitter 原始时间（取整交给判定侧）
             "yc_data": yp.value,
         })
-    # yx501 免考标志时间线
-    p_exempt = 501
+    # yx 免考旗时间线（点号由调用方按 points.yaml 传入，测试号段 4010）
+    p_exempt = exempt_point
     for t, val in bundle.yx501_timeline:
         raw = jitter_save_time(t, variant=1)
         key = (p_exempt, format_yc_time(raw))

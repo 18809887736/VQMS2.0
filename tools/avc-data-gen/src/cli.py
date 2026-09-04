@@ -122,16 +122,16 @@ def main(argv=None) -> int:
             out_dir.mkdir(parents=True, exist_ok=True)
             for b in bundles:
                 p = out_dir / f"{b.scenario_id}.sql"
-                write_bundle_sql(b, p)
+                write_bundle_sql(b, p, points=cfg.points)
             print(f"[OK] {len(bundles)} 场景 -> {out_dir}/ (每场景一文件)")
         else:
             out = Path(args.out)
             out.parent.mkdir(parents=True, exist_ok=True)
             if len(bundles) == 1:
-                write_bundle_sql(bundles[0], out, include_header=not args.with_ddl)
+                write_bundle_sql(bundles[0], out, include_header=not args.with_ddl, points=cfg.points)
             else:
                 label = args.group or "all"
-                write_bundled_sql(bundles, out, label=label)
+                write_bundled_sql(bundles, out, label=label, points=cfg.points)
                 if args.with_ddl:
                     # 前置 schema：拼接到同目录 00-schema.sql（split 模式更清晰，这里只提示）
                     print("[note] --with-ddl 建议配合 --split 或单场景；多场景合并请单独跑 `schema`")
@@ -167,7 +167,7 @@ def main(argv=None) -> int:
                                  "description": b.description, "expected": b.expected})
                 rows_c = emit_his_curve_sv_rows(b)
                 rows_w = emit_warn_info_rows(b)
-                rows_y = emit_yc_history_rows(b)
+                rows_y = emit_yc_history_rows(b, exempt_point=cfg.points["exempt_flag"])
                 for r in rows_c:
                     dt = datetime.strptime(r["save_time"], "%Y-%m-%d %H:%M:%S.%f")
                     occ["curve"].add((r["busbar_num"], round_to_minute(dt)))
@@ -181,7 +181,7 @@ def main(argv=None) -> int:
                 all_rows["warn_info"] += rows_w
                 all_rows["yc_history"] += rows_y
             bg = emit_background_rows(di, day, occ, is_scenario_day=(di < len(ALL_SCENARIOS)),
-                                      scenario_points=scenario_points)
+                                      scenario_points=scenario_points, points=cfg.points)
             for k in all_rows:
                 all_rows[k] += bg[k]
 

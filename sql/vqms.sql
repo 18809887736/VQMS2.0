@@ -167,7 +167,7 @@ create table vqms_yc_point_map (
   unique key uk_point_key (point_key)
 ) engine=innodb default charset=utf8mb4 collate=utf8mb4_0900_ai_ci comment='VQMS 点号语义注册表';
 
--- 种子：真实候选（资料行，无语义键，gate_enabled=0 现场核对后启用）+ 管线语义键行（sim/JS 派生号，已启用）
+-- 种子：真实候选（资料行，无语义键，gate_enabled=0 现场核对后启用）+ 管线语义键行（4000+ 测试号段，2026-09-04 Leo 拍板全部自定，已启用）
 -- 现场接线配置化（2026-09-03）：管线按 point_key 消费，现场换号只 UPDATE 本表，不改代码不发版
 insert into vqms_yc_point_map (point_num, point_key, point_kind, point_name, point_type, unit, state_1_label, state_0_label, gate_enabled, remark) values
   (3,    null, 'C', '主母线号(现场候选)',     'busbar_id', null,  null, null, 0, 'BUSBAR_GROUP.MainBarYcNum=3；值域预期 0/1=东/西母线，待现场核对'),
@@ -179,16 +179,16 @@ insert into vqms_yc_point_map (point_num, point_key, point_kind, point_name, poi
   (317,  null, 'C', '实时无功·2号机',         'reactive',  'kvar',null, null, 0, 'GENERATOR.qYcNum=317；设备级免考判定用；待现场核对（vqms_reactive_device.q_yc_num 落库生效）'),
   (11,   null, 'C', '母线总无功·正母单元',    'reactive',  'kvar',null, null, 0, '对端 JS 计算（yc217+317 累加）；结果点 11'),
   (17,   null, 'C', '母线总无功·副母单元',    'reactive',  'kvar',null, null, 0, '对端 JS 计算；结果点 17'),
-  (511,  'grid_signal_main',  'C', '并网编码·正母单元', 'analog', null, null, null, 1, '对端 JS：带电(1/0)×10+并网机组数；电厂并网=yc511≥10 OR yc512≥10'),
-  (512,  'grid_signal_aux',   'C', '并网编码·副母单元', 'analog', null, null, null, 1, '同 yc511（副母单元）'),
-  (521,  'exit_reason_main',  'C', 'AVC退出原因·正母',  'analog', null, null, null, 1, '三态 0=未退出/1=电网原因(免责)/2=非电网(扣罚)；对端接口已定待落盘，落盘前走人工标注'),
-  (522,  'exit_reason_aux',   'C', 'AVC退出原因·副母',  'analog', null, null, null, 1, '三态同 yc521（副母）'),
-  (3009, 'avc_onoff',         'C', 'AVC投退(sim)',      'analog', null, '投入', '退出', 1, 'sim 占位号：真实库 yc3009=四号机组下闭锁总信号（JS_DATA js109）撞号不同义；真实候选 yx1001（AVC_INFO.AVCStatusYxNum）——现场核对后 UPDATE 本行 point_num=1001'),
+  (4005,'grid_signal_main',  'C', '并网编码·正母单元', 'analog', null, null, null, 1, '对端 JS：带电(1/0)×10+并网机组数；电厂并网=yc511≥10 OR yc512≥10'),
+  (4006,'grid_signal_aux',   'C', '并网编码·副母单元', 'analog', null, null, null, 1, '同 yc511（副母单元）'),
+  (4008,'exit_reason_main',  'C', 'AVC退出原因·正母',  'analog', null, null, null, 1, '三态 0=未退出/1=电网原因(免责)/2=非电网(扣罚)；对端接口已定待落盘，落盘前走人工标注'),
+  (4009,'exit_reason_aux',   'C', 'AVC退出原因·副母',  'analog', null, null, null, 1, '三态同 yc521（副母）'),
+  (4007,'avc_onoff',         'C', 'AVC投退(测试)',     'analog', null, '投入', '退出', 1, '测试号段 4000+（Leo 2026-09-04 拍板：测试开发阶段全部自定）；真实候选 yx1001（AVC_INFO.AVCStatusYxNum）——现场接入时 UPDATE 本行换号'),
   (1001, null, 'X', 'AVC投退(现场候选)',      'yx',        null,  '投入', '退出', 0, 'AVC_INFO.AVCStatusYxNum=1001；语义待现场核对（核对后把 avc_onoff 语义键行换号到此）'),
   (210,  null, 'X', '机组投退·1号机',         'yx',        null,  '并网', '解列', 0, '对端 JS（断路器∧刀闸）；结果点 210'),
   (310,  null, 'X', '机组投退·2号机',         'yx',        null,  '并网', '解列', 0, '对端 JS（断路器∧刀闸）；结果点 310'),
   (2003, null, 'X', '远方就地总',             'yx',        null,  '远方', '就地', 0, '对端派生点 OR(yx12,yx23)；warn_info 有 obj_num=2003 事件佐证'),
-  (501,  'exempt_flag',       'X', '免考旗(无源)',      'yx',        null,  '免考', '考核', 1, '现场库不存在（核对报告发现③）；注册备对端实现，落盘前免考走三源判定')
+  (4010,'exempt_flag',       'X', '免考旗(无源)',      'yx',        null,  '免考', '考核', 1, '现场库不存在（核对报告发现③）；注册备对端实现，落盘前免考走三源判定')
 
 
 -- 6、判定整定参数（CHECK 双层：行本地值域 + 锁定行钉值；1.0 D7 成熟模式）
@@ -396,8 +396,8 @@ create table vqms_reactive_device (
 
 -- 种子：两台机组（对端 GENERATOR 蓝本：2×300MW，max/minQ=+200000/−100000 kvar；P-Q 曲线待录入）
 insert into vqms_reactive_device (entity_id, device_code, device_name, device_type, rated_q_up_kvar, rated_q_down_kvar, q_yc_num, p_yc_num, remark) values
-  (1, 'GEN_01', '1号发电机组', 1, 200000.000, -100000.000, 217, 216, '额定值来自对端 GENERATOR 静态列；随P变化的精确极限待录 vqms_device_pq_limit'),
-  (1, 'GEN_02', '2号发电机组', 1, 200000.000, -100000.000, 317, 316, '同 1号机');
+  (1, 'GEN_01', '1号发电机组', 1, 200000.000, -100000.000, 4012, 4011, '额定值来自对端 GENERATOR 静态列；随P变化的精确极限待录 vqms_device_pq_limit'),
+  (1, 'GEN_02', '2号发电机组', 1, 200000.000, -100000.000, 4014, 4013, '同 1号机');
 
 -- P-Q 曲线种子（300MW 机组三点插值蓝本；端点与静态额定一致，现场实测后换版）
 insert into vqms_device_pq_limit (device_id, p_kw, q_up_kvar, q_down_kvar, effective_from, remark)

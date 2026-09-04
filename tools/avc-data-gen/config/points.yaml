@@ -1,30 +1,30 @@
 # VQMS AVC 合成数据生成器配置 —— 遥测点号映射
-# 除 2003（真实派生点，2026-08-18 定号）外，其余 yc_num 均为"现场整定"占位号，现场补录后改本文件即可。
-# 固定的 JS 引擎派生点（yc511/512/521/522、yx501）按数据源头（草稿）.md 缺口定义。
-# 真实号考据（2026-08-18，证据链见 docs/数据源头（草稿）.md 定号一览；落地前现场核对）：
-#   avc_onoff 真实候选 yx1001（AVC_INFO.AVCStatusYxNum=1001）——⚠️ 真实库 yx3009 = 四号机组
-#   下闭锁总信号（JS_DATA js109），与合成占位 3009 撞号不同义，现场核对后必须换号；
+# ⚠️ 测试开发阶段号段拍板（Leo 2026-09-04）：全部信号点由 VQMS 自定，统一 4000+ 测试号段——
+#   根治撞号（旧占位 3009 与真实库"四号机组下闭锁"撞号不同义）、避开真实库已有号段。
+#   现场接入时按对端落盘实际号整定（改本文件 + UPDATE vqms_yc_point_map / 台账，不改代码）。
+# 真实号考据存档（2026-08-18，证据链见 docs/数据源头（草稿）.md 定号一览；对端落盘后核对换号）：
+#   avc_onoff 真实候选 yx1001（AVC_INFO.AVCStatusYxNum=1001）；
 #   main_busbar_num 真实候选 yc3（对端 BUSBAR_GROUP.MainBarYcNum=3）；
 #   realtime_v 真实候选 yc8（东母）/ yc14（西母）（BUSBAR.realVYcNum）；
 #   active_power 真实候选 yc216 + yc316（GENERATOR.pYcNum，VQMS 求和，无现成总加 JS 节点）。
 
-avc_onoff: 3009            # AVC 投退点（yc_data 1=投 / 0=退，阶跃保持）
-remote_local: 2003         # 远方就地总（真实派生点 yx2003 = OR(yx12 正母, yx23 副母)，1=远方/0=就地；
-                           # 取自对端配置库 JS_DATA 14「远方/就地合并」+ warn_info obj_num=2003 佐证）
+# ── 4000+ 测试号段（VQMS 自定，2026-09-04 起）──
+avc_onoff: 4007            # AVC 投退点（yc_data 1=投 / 0=退，阶跃保持）
+remote_local: 4020         # 远方就地总（测试占位；真实派生点 yx2003=OR(yx12,yx23) 有事件佐证）
 main_busbar_num: 4001      # 主母线号指示点（yc_data 0/1）
 realtime_v_busbar0: 4002   # 实时母线电压 busbar0（yc_data kV 带小数，如 234.25）
 realtime_v_busbar1: 4003   # 实时母线电压 busbar1
 active_power: 4004         # 总有功功率（yc_data，如 114800）
 
-# 设备级遥测（vqms_reactive_device 台账 p_yc/q_yc 对应点号；p 真实候选 yc216+yc316 已考据见上）
-p_gen1: 216                # GEN_01 有功 kW
-q_gen1: 217                # GEN_01 无功 kvar
-p_gen2: 316                # GEN_02 有功 kW
-q_gen2: 317                # GEN_02 无功 kvar
+# 设备级遥测（vqms_reactive_device 台账 p_yc/q_yc 对应点号）
+p_gen1: 4011               # GEN_01 有功 kW
+q_gen1: 4012               # GEN_01 无功 kvar
+p_gen2: 4013               # GEN_02 有功 kW
+q_gen2: 4014               # GEN_02 无功 kvar
 
-# JS 引擎派生点（固定建议点号，见 docs/外部DB/JS计算引擎说明.md）
-grid_signal_main: 511      # yc511 正母并网：值 = 带电(1/0)×10 + 机组数(0/1/2)；≥10 即并网
-grid_signal_aux: 512       # yc512 副母并网：同上
-exit_reason_main: 521      # yc521 正母退出原因：0=未退 / 1=电网原因(免责) / 2=非电网(扣罚)
-exit_reason_aux: 522       # yc522 副母退出原因：同上
-exempt_flag: 501           # yx501 免考标志（全厂一个）：1=全设备顶满(免考) / 0=未顶满
+# 五信号 + 免考旗（判定/投运管线按 point_key 消费 vqms_yc_point_map 语义键行）
+grid_signal_main: 4005     # 并网编码·正母：值 = 带电(1/0)×10 + 机组数(0/1/2)；≥10 即并网
+grid_signal_aux: 4006      # 并网编码·副母：同上
+exit_reason_main: 4008     # AVC退出原因·正母：0=未退 / 1=电网原因(免责) / 2=非电网(扣罚)
+exit_reason_aux: 4009      # AVC退出原因·副母：同上
+exempt_flag: 4010          # 免考标志（全厂一个）：1=全设备顶满(免考) / 0=未顶满
