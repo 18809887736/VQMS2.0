@@ -11,14 +11,14 @@ REDIS_PORT="${REDIS_PORT:-6379}"
 
 wait_for() {
     local host="$1" port="$2" i
-    for i in $(seq 1 90);.
+    for i in $(seq 1 90); do
         if (exec 3<>"/dev/tcp/${host}/${port}") 2>/dev/null; then
             exec 3>&- 3<&-
             return 0
         fi
         sleep 2
     done
-    echo "ERROR: timeout waiting for ${host}:${port}" 1>&2
+    echo "ERROR: timeout waiting for ${host}:${port}" >&2
     return 1
 }
 
@@ -27,7 +27,7 @@ if [ "${SKIP_WAIT_MYSQL:-0}" != "1" ]; then
     wait_for "${MYSQL_HOST}" "${MYSQL_PORT}"
 fi
 if [ "${SKIP_WAIT_REDIS:-0}" != "1" ]; then
-    echo "[entrypoint] 若你看到此行说明在等待 Redis..."
+    echo "[entrypoint] waiting for redis at ${REDIS_HOST}:${REDIS_PORT}..."
     wait_for "${REDIS_HOST}" "${REDIS_PORT}"
 fi
 echo "[entrypoint] starting ruoyi-admin on port ${SERVER_PORT:-18080}"
