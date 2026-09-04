@@ -1,0 +1,4 @@
+# Railway MySQL: initdb scripts auto-run on first boot into MYSQL_DATABASE
+FROM mysql:8.0
+COPY docker/mysql/initdb/ /docker-entrypoint-initdb.d/
+COPY docker/mysql/conf.d/ /etc/mysql/conf.d/
