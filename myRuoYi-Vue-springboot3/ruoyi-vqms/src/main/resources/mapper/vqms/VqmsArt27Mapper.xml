@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.vqms.mapper.VqmsArt27Mapper">
+
+    <resultMap type="com.ruoyi.vqms.domain.VqmsArt27Device" id="DeviceResult">
+        <result property="deviceId"        column="device_id"/>
+        <result property="entityId"        column="entity_id"/>
+        <result property="deviceCode"      column="device_code"/>
+        <result property="deviceName"      column="device_name"/>
+        <result property="deviceType"      column="device_type"/>
+        <result property="ratedCapacityKw" column="rated_capacity_kw"/>
+        <result property="autoYxNum"       column="auto_yx_num"/>
+        <result property="energizedYxNum"  column="energized_yx_num"/>
+        <result property="status"          column="status"/>
+        <result property="createBy"        column="create_by"/>
+        <result property="createTime"      column="create_time"/>
+        <result property="remark"          column="remark"/>
+    </resultMap>
+
+    <resultMap type="com.ruoyi.vqms.domain.VqmsArt27Month" id="MonthResult">
+        <result property="id"                column="id"/>
+        <result property="statMonth"         column="stat_month"/>
+        <result property="deviceId"          column="device_id"/>
+        <result property="autoHours"         column="auto_hours"/>
+        <result property="energizedHours"    column="energized_hours"/>
+        <result property="ratePenaltyDays"   column="rate_penalty_days"/>
+        <result property="nameplateDays"     column="nameplate_days"/>
+        <result property="regulatorRate"     column="regulator_rate"/>
+        <result property="regulatorPenalty"  column="regulator_penalty"/>
+        <result property="source"            column="source"/>
+        <result property="createBy"          column="create_by"/>
+        <result property="createTime"        column="create_time"/>
+        <result property="remark"            column="remark"/>
+    </resultMap>
+
+    <select id="selectDevices" parameterType="com.ruoyi.vqms.domain.VqmsArt27Device" resultMap="DeviceResult">
+        select device_id, entity_id, device_code, device_name, device_type, rated_capacity_kw, auto_yx_num, energized_yx_num, status, create_by, create_time, remark
+        from vqms_art27_device
+        <where>
+            <if test="entityId != null"> and entity_id = #{entityId}</if>
+            <if test="deviceCode != null and deviceCode != ''"> and device_code like concat('%', #{deviceCode}, '%')</if>
+            <if test="status != null and status != ''"> and status = #{status}</if>
+        </where>
+        order by device_code
+    </select>
+
+    <select id="selectDeviceById" parameterType="Long" resultMap="DeviceResult">
+        select device_id, entity_id, device_code, device_name, device_type, rated_capacity_kw, auto_yx_num, energized_yx_num, status, create_by, create_time, remark
+        from vqms_art27_device where device_id = #{deviceId}
+    </select>
+
+    <insert id="insertDevice" parameterType="com.ruoyi.vqms.domain.VqmsArt27Device" useGeneratedKeys="true" keyProperty="deviceId">
+        insert into vqms_art27_device (entity_id, device_code, device_name, device_type, rated_capacity_kw, auto_yx_num, energized_yx_num, status, create_by, remark)
+        values (#{entityId}, #{deviceCode}, #{deviceName}, #{deviceType}, #{ratedCapacityKw}, #{autoYxNum}, #{energizedYxNum}, #{status}, #{createBy}, #{remark})
+    </insert>
+
+    <update id="updateDevice" parameterType="com.ruoyi.vqms.domain.VqmsArt27Device">
+        update vqms_art27_device
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="entityId != null">entity_id = #{entityId},</if>
+            <if test="deviceCode != null and deviceCode != ''">device_code = #{deviceCode},</if>
+            <if test="deviceName != null and deviceName != ''">device_name = #{deviceName},</if>
+            <if test="deviceType != null">device_type = #{deviceType},</if>
+            <if test="ratedCapacityKw != null">rated_capacity_kw = #{ratedCapacityKw},</if>
+            <if test="autoYxNum != null">auto_yx_num = #{autoYxNum},</if>
+            <if test="energizedYxNum != null">energized_yx_num = #{energizedYxNum},</if>
+            <if test="status != null and status != ''">status = #{status},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="remark != null">remark = #{remark},</if>
+        </trim>
+        where device_id = #{deviceId}
+    </update>
+
+    <delete id="deleteDeviceByIds" parameterType="String">
+        delete from vqms_art27_device where device_id in
+        <foreach item="deviceId" collection="array" open="(" separator="," close=")">#{deviceId}</foreach>
+    </delete>
+
+    <select id="selectMonths" parameterType="String" resultMap="MonthResult">
+        select id, stat_month, device_id, auto_hours, energized_hours, rate_penalty_days, nameplate_days, regulator_rate, regulator_penalty, source, create_by, create_time, remark
+        from vqms_art27_month
+        where stat_month = #{statMonth}
+        order by device_id
+    </select>
+
+    <select id="selectMonthById" parameterType="Long" resultMap="MonthResult">
+        select id, stat_month, device_id, auto_hours, energized_hours, rate_penalty_days, nameplate_days, regulator_rate, regulator_penalty, source, create_by, create_time, remark
+        from vqms_art27_month where id = #{id}
+    </select>
+
+    <insert id="insertMonth" parameterType="com.ruoyi.vqms.domain.VqmsArt27Month" useGeneratedKeys="true" keyProperty="id">
+        insert into vqms_art27_month (stat_month, device_id, auto_hours, energized_hours, rate_penalty_days, nameplate_days, regulator_rate, regulator_penalty, source, create_by, remark)
+        values (#{statMonth}, #{deviceId}, #{autoHours}, #{energizedHours}, #{ratePenaltyDays}, #{nameplateDays}, #{regulatorRate}, #{regulatorPenalty}, #{source}, #{createBy}, #{remark})
+    </insert>
+
+    <update id="updateMonth" parameterType="com.ruoyi.vqms.domain.VqmsArt27Month">
+        update vqms_art27_month
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="autoHours != null">auto_hours = #{autoHours},</if>
+            <if test="energizedHours != null">energized_hours = #{energizedHours},</if>
+            <if test="ratePenaltyDays != null">rate_penalty_days = #{ratePenaltyDays},</if>
+            <if test="nameplateDays != null">nameplate_days = #{nameplateDays},</if>
+            <if test="regulatorRate != null">regulator_rate = #{regulatorRate},</if>
+            <if test="regulatorPenalty != null">regulator_penalty = #{regulatorPenalty},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="remark != null">remark = #{remark},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteMonthByIds" parameterType="String">
+        delete from vqms_art27_month where id in
+        <foreach item="id" collection="array" open="(" separator="," close=")">#{id}</foreach>
+    </delete>
+</mapper>
