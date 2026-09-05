@@ -203,20 +203,14 @@ public class RegulationJudgeService {
         BigDecimal rtKv = realtimeAt(realtime, t0);
         BigDecimal targetKv = VTargetDecoder.decodeAny(cmd.getWarnContent(), rtKv);
 
-        // 原始判定不进免考旗：三源免考链在编排层逐档套用（PEN → EXEMPTED 的翻转规则与纯函数一致）
+        // 原始判定不进免考旗：三源免考链在编排层逐档套用（MANUAL > AUTO_YX > AUTO_DEVICE）
         boolean exFast = exemptFlagPtMissing(exemptFlag) && flagMissingAsExempt
                 || flagAt(exemptFlag, t0.plusMinutes(tFast));
         boolean exEcon = exemptFlagPtMissing(exemptFlag) && flagMissingAsExempt
                 || flagAt(exemptFlag, t0.plusMinutes(T_ECON + 1));
         Outcome o = RegulationJudge.judge(targetKv, curve, t0, tFast, T_ECON, false, false, policy);
         String fastState = o.fastState();
-        if (RegulationJudge.PENALIZED.equals(fastState) && exFast) {
-            fastState = RegulationJudge.EXEMPTED;
-        }
         String econState = o.econState();
-        if (RegulationJudge.PENALIZED.equals(econState) && exEcon) {
-            econState = RegulationJudge.EXEMPTED;
-        }
         String srcFast = null;
         String srcEcon = null;
         Long refFast = null;
@@ -231,7 +225,7 @@ public class RegulationJudgeService {
                 srcFast = "MANUAL";
                 refFast = ann.getAnnotationId();
                 counts.merge("exemptManual", 1L, Long::sum);
-            } else if (flagAt(exemptFlag, t0.plusMinutes(tFast))) {
+            } else if (exFast) {
                 fastState = RegulationJudge.EXEMPTED;
                 srcFast = "AUTO_YX";
                 counts.merge("exemptAutoYx", 1L, Long::sum);
@@ -247,7 +241,7 @@ public class RegulationJudgeService {
                 srcEcon = "MANUAL";
                 refEcon = ann.getAnnotationId();
                 counts.merge("exemptManual", 1L, Long::sum);
-            } else if (flagAt(exemptFlag, t0.plusMinutes(T_ECON + 1))) {
+            } else if (exEcon) {
                 econState = RegulationJudge.EXEMPTED;
                 srcEcon = "AUTO_YX";
                 counts.merge("exemptAutoYx", 1L, Long::sum);
