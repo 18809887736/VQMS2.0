@@ -398,10 +398,11 @@ create table vqms_reactive_device (
   unique key uk_device_code (entity_id, device_code)
 ) engine=innodb default charset=utf8mb4 collate=utf8mb4_0900_ai_ci comment='VQMS 无功设备台账（免考判定单元）';
 
--- 种子：两台机组（对端 GENERATOR 蓝本：2×300MW，max/minQ=+200000/−100000 kvar；P-Q 曲线待录入）
+-- 种子：两台机组（对端 GENERATOR 实测：2×350MW，max/minQ=+300000/−100000 kvar）
+-- Q 上限 300,000 kvar（Leo 2026-09-05 拍板 = 配置库 maxQPower；原 200,000 系建库旧认知）；静态为无曲线时兜底，判定优先走 P-Q 曲线
 insert into vqms_reactive_device (entity_id, device_code, device_name, device_type, rated_q_up_kvar, rated_q_down_kvar, q_yc_num, p_yc_num, remark) values
-  (1, 'GEN_01', '1号发电机组', 1, 200000.000, -100000.000, 4012, 4011, '额定值来自对端 GENERATOR 静态列；随P变化的精确极限待录 vqms_device_pq_limit'),
-  (1, 'GEN_02', '2号发电机组', 1, 200000.000, -100000.000, 4014, 4013, '同 1号机');
+  (1, 'GEN_01', '1号发电机组', 1, 300000.000, -100000.000, 4012, 4011, 'Q上限=配置库maxQPower 300000（Leo 2026-09-05拍板）；曲线端点250k@0MW为蓝本，与静态300k的关系待现场实测校核换版'),
+  (1, 'GEN_02', '2号发电机组', 1, 300000.000, -100000.000, 4014, 4013, '同 1号机');
 
 -- P-Q 曲线种子（300MW 机组三点插值蓝本；端点与静态额定一致，现场实测后换版）
 insert into vqms_device_pq_limit (device_id, p_kw, q_up_kvar, q_down_kvar, effective_from, remark)
