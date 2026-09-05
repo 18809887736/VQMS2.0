@@ -173,8 +173,13 @@ public class ArtTuningService {
                     capCfg = capCfg.add(BigDecimal.valueOf(n.doubleValue()));
                 }
             }
-            rows.add(new DiffRow("校核", "主体容量 kW（Σ ratingPPower）", str(curCapacityKw()), capCfg.stripTrailingZeros().toPlainString(),
-                    false, null, "⚠️ 差异时以监管确认为准（核实单 §1），确认后在并网主体页修改"));
+            // 5) 容量校核（只在真有差异时显示警示行；一致则不出现在 diff 里）
+            BigDecimal capCur = curCapacityKw();
+            if (capCur == null || capCfg.stripTrailingZeros().compareTo(capCur.stripTrailingZeros()) != 0) {
+                warnings++;
+                rows.add(new DiffRow("校核", "主体容量 kW（Σ ratingPPower）", str(capCur), capCfg.stripTrailingZeros().toPlainString(),
+                        false, null, "⚠️ 差异时以监管确认为准（核实单 §1），确认后在并网主体页修改"));
+            }
 
             StringBuilder info = new StringBuilder("BUSBAR ").append(bars.size()).append(" 行 / GENERATOR ").append(gens.size()).append(" 行");
             return new Preview(changes, warnings, rows, info.toString());
