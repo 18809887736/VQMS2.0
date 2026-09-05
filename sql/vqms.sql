@@ -5,7 +5,7 @@
 --   ① 运行时 220kV/500kV 单档在运、台账按档登记（busbar 0/1=220kV，2=500kV）
 --   ② 统计粒度合一（stat_grain D/M/Y + stat_period DATE + entity 唯一键）
 --   ③ Phase 2（第26条电压考核/第27条SVG-SVC/有偿无功）等 Phase 1 跑通再建
---   ④ entity 容量 600000 kW 种入、待现场核实
+--   ④ entity 容量 700000 kW（Leo 2026-09-05 拍板 = 配置库 2×350MW；原 2×300MW 认知有误）
 --   ⑤ 免考人工标注复核（PENDING→APPROVED 生效；单账户自批——Leo 2026-09-04 拍板简化）
 --
 -- 相对 VQMS 1.0（C:\work\VQMS\sql\vqms.sql）的关键变更：
@@ -58,9 +58,9 @@ create table vqms_entity (
   unique key uk_entity_code (entity_code)
 ) engine=innodb default charset=utf8mb4 collate=utf8mb4_0900_ai_ci comment='VQMS 并网主体台账（考核主体）';
 
--- 种子：本厂 2×300MW（对端 GENERATOR.ratingPPower=300000 kW×2），容量待现场核实（拍板④）
+-- 种子：本厂 2×350MW（对端 GENERATOR.ratingPPower=350000 kW×2，实测）；Leo 2026-09-05 拍板容量 700,000 kW
 insert into vqms_entity (entity_code, entity_name, entity_type, rated_capacity_kw, remark) values
-  ('PLANT_01', '本厂（名称待现场核实）', '1', 600000.000, '额定容量来自对端 AVC 配置库 2×300MW；⚠️待与监管结算口径核实后修正（拍板④ 2026-09-02）');
+  ('PLANT_01', '本厂（名称待现场核实）', '1', 700000.000, '额定容量 = 对端 AVC 配置库 2×350MW（ratingPPower 实测 350000×2）；Leo 2026-09-05 拍板 700,000 kW（如监管结算口径不同再改，并网主体页一处即生效）');
 
 
 -- 2、母线组（主母线判定单元）
