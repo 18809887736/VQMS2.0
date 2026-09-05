@@ -38,6 +38,7 @@ VQMS (Voltage Quality Management System) is an AVC bus-voltage quality monitorin
 ## 数据库规约 / Database Conventions
 
 - **新增数据表一律以 `vqms_` 前缀命名** / All newly created tables MUST be prefixed with `vqms_`（与若依自带 sys_/gen_/qrtz_ 等系统表区分 / to distinguish from RuoYi's built-in sys_/gen_/qrtz_ tables）
+- **yx 信号统一按 yc 处理（Leo 2026-09-05 拍板）** / All yx (status) signals are handled as yc：对端开关量（AVC 投退/免考旗/机组投退等）一律写/读 **yc_history 单表**（阶跃保持=变位点写一条，读侧取最近≤t），**不引入 yx_history** / status signals all live in yc_history with step-hold semantics — never introduce an yx_history table; consumption faces one table with one reader
 
 ## 政策依据核心口径 / Policy Key Points（附件6 AVC，2024 版 p47-49 / Annex 6 AVC, 2024 ed.）
 
