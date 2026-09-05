@@ -87,9 +87,12 @@ public class ArtTuningService {
             Object cfgOnoff = avc.get("AVCStatusYxNum");
             if (cfgOnoff != null && !String.valueOf(cfgOnoff).equals(String.valueOf(curOnoff))) {
                 changes++;
+                // 主键占号让位：目标号若被无语义键的资料行占用（如 1001 现场候选考据行），先删资料行再换号
+                String cleanup = occupiedByReferenceRow(cfgOnoff)
+                        ? "delete from vqms_yc_point_map where point_num = " + cfgOnoff + " and point_key is null; " : "";
                 rows.add(new DiffRow("点号", "AVC投退 avc_onoff", str(curOnoff), str(cfgOnoff), true,
-                        "update vqms_yc_point_map set point_num = " + cfgOnoff + ", point_kind='X', point_type='yx' where point_key = 'avc_onoff' and point_num = " + curOnoff + ";",
-                        "AVC_INFO.AVCStatusYxNum"));
+                        cleanup + "update vqms_yc_point_map set point_num = " + cfgOnoff + ", point_kind='X', point_type='yx' where point_key = 'avc_onoff' and point_num = " + curOnoff + ";",
+                        "AVC_INFO.AVCStatusYxNum" + (cleanup.isEmpty() ? "" : "（含占号资料行让位）")));
             }
 
             // 2) 主母线号指示点
@@ -193,6 +196,35 @@ public class ArtTuningService {
             }
         }
         return 0;
+    }
+
+    /** 目标点号是否被无语义键的资料行占用（point_map 主键冲突源）。 */
+    private boolean occupiedByReferenceRow(Object pointNum) {
+        try {
+            Long target = Long.parseLong(String.valueOf(pointNum));
+            var all = pointConfig.loadGatePoints(); // 语义行不含冲突；查全表需 mapper
+            return occupiedViaMapper(target);
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
+    @Autowired
+    private com.ruoyi.vqms.mapper.VqmsYcPointMapMapper pointMapMapper;
+
+    private boolean occupiedViaMapper(long target) {
+        var q = new com.ruoyi.vqms.domain.VqmsYcPointMap();
+        q.setPointNum(target);
+        var rows = pointMapMapper.selectVqmsYcPointMapList(q);
+        if (rows == null) {
+            return false;
+        }
+        for (var r : rows) {
+            if (r.getPointKey() == null || r.getPointKey().isEmpty()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static com.ruoyi.vqms.domain.VqmsReactiveDevice findDevice(

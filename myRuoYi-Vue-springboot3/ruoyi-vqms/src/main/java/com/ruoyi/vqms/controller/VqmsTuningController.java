@@ -69,11 +69,20 @@ public class VqmsTuningController extends BaseController {
         try (var cn = dataSource.getConnection(); var st = cn.createStatement()) {
             cn.setAutoCommit(false);
             for (String sql : sqls) {
-                if (!sql.trim().toLowerCase().startsWith("update vqms_")) {
-                    cn.rollback();
-                    throw new ServiceException("拒绝非 vqms_ 表语句: " + sql);
+                for (String one : sql.split(";\\s*")) {
+                    String t = one.trim();
+                    if (t.isEmpty()) {
+                        continue;
+                    }
+                    String lower = t.toLowerCase();
+                    boolean allowed = lower.startsWith("update vqms_")
+                            || (lower.startsWith("delete from vqms_yc_point_map where point_num =") && lower.contains("and point_key is null"));
+                    if (!allowed) {
+                        cn.rollback();
+                        throw new ServiceException("拒绝语句（白名单外）: " + t);
+                    }
+                    done += st.executeUpdate(t);
                 }
-                done += st.executeUpdate(sql);
             }
             cn.commit();
         } catch (ServiceException e) {
