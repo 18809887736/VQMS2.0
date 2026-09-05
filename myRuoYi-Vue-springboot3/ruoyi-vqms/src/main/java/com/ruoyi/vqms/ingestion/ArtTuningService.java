@@ -156,8 +156,8 @@ public class ArtTuningService {
                                 "update vqms_reactive_device set q_yc_num = " + cfgQ + " where device_code = '" + code + "' and q_yc_num = " + dev.getqYcNum() + ";",
                                 "GENERATOR.qYcNum"));
                     }
-                    warnings += warnRating(rows, code + " Q 上限", dev.getRatedQUpKvar(), gen.get("maxQPower"));
-                    warnings += warnRating(rows, code + " Q 下限", dev.getRatedQDownKvar(), gen.get("minQPower"));
+                    changes += tuneRating(rows, code, "Q 上限", dev.getRatedQUpKvar(), gen.get("maxQPower"), "rated_q_up_kvar", dev.getDeviceId());
+                    changes += tuneRating(rows, code, "Q 下限", dev.getRatedQDownKvar(), gen.get("minQPower"), "rated_q_down_kvar", dev.getDeviceId());
                 } else {
                     warnings++;
                     rows.add(new DiffRow("台账", code, "无台账行", str(gen.get("pYcNum")) + "/" + str(gen.get("qYcNum")),
@@ -173,12 +173,15 @@ public class ArtTuningService {
                     capCfg = capCfg.add(BigDecimal.valueOf(n.doubleValue()));
                 }
             }
-            // 5) 容量校核（只在真有差异时显示警示行；一致则不出现在 diff 里）
+            // 5) 容量（Leo 2026-09-05 拍板纳入整定范围；结算口径仍以监管确认为准，整定后如监管口径不同可在并网主体页再改）
             BigDecimal capCur = curCapacityKw();
             if (capCur == null || capCfg.stripTrailingZeros().compareTo(capCur.stripTrailingZeros()) != 0) {
-                warnings++;
+                changes++;
                 rows.add(new DiffRow("校核", "主体容量 kW（Σ ratingPPower）", str(capCur), capCfg.stripTrailingZeros().toPlainString(),
-                        false, null, "⚠️ 差异时以监管确认为准（核实单 §1），确认后在并网主体页修改"));
+                        true,
+                        "update vqms_entity set rated_capacity_kw = " + capCfg.stripTrailingZeros().toPlainString()
+                                + " where entity_id = 1 and rated_capacity_kw = " + (capCur == null ? "null" : capCur.toPlainString()) + ";",
+                        "GENERATOR.ratingPPower 合计；结算口径如有不同以监管确认为准（核实单 §1）"));
             }
 
             StringBuilder info = new StringBuilder("BUSBAR ").append(bars.size()).append(" 行 / GENERATOR ").append(gens.size()).append(" 行");
@@ -191,12 +194,17 @@ public class ArtTuningService {
         }
     }
 
-    private static int warnRating(List<DiffRow> rows, String what, BigDecimal cur, Object cfg) {
+    /** Q 额定差异整定（Leo 2026-09-05 拍板纳入范围）：改台账静态额定；P-Q 曲线（vqms_device_pq_limit）按需另行换版。 */
+    private static int tuneRating(List<DiffRow> rows, String code, String what, BigDecimal cur, Object cfg,
+                                  String column, Long deviceId) {
         if (cfg instanceof Number n) {
             BigDecimal c = BigDecimal.valueOf(n.doubleValue());
             if (cur == null || cur.compareTo(c) != 0) {
-                rows.add(new DiffRow("校核", what, str(cur), str(c), false, null,
-                        "⚠️ 不一致——Q 额定走 P-Q 曲线换版流程（vqms_device_pq_limit），不自动落库"));
+                rows.add(new DiffRow("校核", code + " " + what, str(cur), str(c), true,
+                        "update vqms_reactive_device set " + column + " = " + c.toPlainString()
+                                + " where device_id = " + deviceId + " and " + column + " = " + cur + ";",
+                        "GENERATOR." + (column.endsWith("up_kvar") ? "maxQPower" : "minQPower")
+                                + "；P-Q 曲线如需同步换版走设备P-Q极曲线页"));
                 return 1;
             }
         }
