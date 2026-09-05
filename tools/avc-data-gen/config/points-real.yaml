@@ -1,0 +1,22 @@
+# 真实号段 profile（2026-09-05 整定后 140 注册表实态）：
+# avc_onoff=1001 / 主母线号=3 / 实时电压=8,14 / 设备 P/Q=216,217,316,317（QHeatAvcRtdb.db 实测值）
+# 并网/退因/免考旗为 JS 派生设想点，无配置库源，沿用 4000+ 测试段。
+# ⚠️ 本文件必须与 vqms_yc_point_map / vqms_busbar / vqms_reactive_device 台账保持一致；
+#    台账重新整定后同步改这里（或反向：用 tools/avc-tuning 生成）。
+avc_onoff: 1001
+remote_local: 4020
+main_busbar_num: 3
+realtime_v_busbar0: 8
+realtime_v_busbar1: 14
+active_power: 4004
+
+p_gen1: 216
+q_gen1: 217
+p_gen2: 316
+q_gen2: 317
+
+grid_signal_main: 4005
+grid_signal_aux: 4006
+exit_reason_main: 4008
+exit_reason_aux: 4009
+exempt_flag: 4010

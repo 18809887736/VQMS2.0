@@ -1,4 +1,2 @@
-# 合成数据生成器依赖
+pymysql>=1.1
 PyYAML>=6.0
-# 直连写入模式（可选，仅 `cli direct` 子命令用）
-mysql-connector-python>=8.0

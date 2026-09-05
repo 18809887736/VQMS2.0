@@ -1,0 +1,23 @@
+services:
+  avc-data-gen:
+    build: .
+    image: avc-data-gen:local
+    container_name: avc-data-gen
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
+      DB_HOST: qheat-sim-mysql57
+      DB_PORT: "3306"
+      DB_USER: root
+      DB_PASSWORD: ${SIM_MYSQL_ROOT_PASSWORD}
+      DB_NAME: qheatavchisdb
+      DAILY_TIME: "01:00"          # 早于 VQMS 03:00 夜任务
+      POINTS_FILE: config/points-real.yaml  # 与注册表整定态一致；回 4000+ 测试段时改 points.yaml
+      RUN_ON_STARTUP: "1"
+    networks:
+      - qheat-sim
+
+networks:
+  qheat-sim:
+    name: qheat-sim_default
+    external: true
