@@ -135,3 +135,22 @@ python -m verify.run_verify --host 10.0.0.9 --port 3306 --user root \
 - **双写**：his_curve_sv 每分钟生成 busbar 0+1；主母线由 yc_history 指示点（默认0）决定，副母线作干扰。
 - **yc_history UNIQUE(yc_num,yc_time)**：生成器保证唯一；阶跃保持场景只在变位点写。
 - **manifest.json**：场景→期望结论，算法实现侧当测试 oracle，免手写 assert。
+
+## 运维命令（docker compose 常驻部署，140 实测 2026-09-05）
+
+部署位置 `~/work/avc-data-gen`（容器名 `avc-data-gen`，接 qheat-sim_default 网络）；`.env` 含 `SIM_MYSQL_ROOT_PASSWORD`。
+
+| 操作 | 命令 |
+|---|---|
+| 部署/重建 | `cd ~/work/avc-data-gen && docker compose up -d --build` |
+| 手动补灌任意日期（幂等可重跑） | `docker exec avc-data-gen python -m src.daily --date YYYY-MM-DD` |
+| 查看调度日志 | `docker logs avc-data-gen --tail 20` |
+| 切换点号 profile | 改 `docker-compose.yml` 的 `POINTS_FILE`（points.yaml=4000+ 测试段 / points-real.yaml=真实号）后 `docker compose up -d` |
+
+**机制**：每天 `DAILY_TIME`（默认 01:00，早于 VQMS 03:00 夜任务）为昨日灌 背景数据+日期锚定轮转场景（同日同场景可复现）；幂等 = 按日 delete-then-insert 三表。启动时自动补灌昨日。
+
+**硬性验证步骤**（2026-09-05 实测通过）：
+1. `docker exec avc-data-gen python -m src.daily --date 2026-09-05` → 输出场景名+三表行数
+2. 源库核验：`select count(*), sum(average_SV is null) from his_curve_sv where save_time >= "2026-09-05 00" and save_time < "2026-09-06 00";`（行数一致、average 全 NULL）
+3. 重复执行步骤 1 → 行数/场景不变（幂等）
+4. 全链消费：VQMS 侧 ingest → judge → runtime 指定该日重算，核对 judged 数 = 灌入指令数、主指令状态与场景 manifest 期望一致（如 S25 脏值拦截 → PEN/PEN）
