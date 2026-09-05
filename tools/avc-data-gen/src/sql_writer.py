@@ -30,7 +30,9 @@ _REPO_ROOT = Path(__file__).resolve().parents[3]  # tools/avc-data-gen/src -> �
 
 
 def _quote(v) -> str:
-    """SQL 字面量：字符串转义加引号，数字原样。"""
+    """SQL 字面量：NULL、字符串转义加引号，数字原样。"""
+    if v is None:
+        return "NULL"
     if isinstance(v, (int, float)):
         return repr(v) if isinstance(v, float) else str(v)
     s = str(v).replace("\\", "\\\\").replace("'", "\\'")
@@ -91,7 +93,7 @@ def write_schema_sql(path: Path) -> None:
     path.write_text("\n".join(parts), encoding="utf-8")
 
 
-def write_bundle_sql(bundle: ScenarioBundle, path: Path, *, include_header: bool = True) -> None:
+def write_bundle_sql(bundle: ScenarioBundle, path: Path, *, include_header: bool = True, points: dict | None = None) -> None:
     """单个场景 -> .sql 文件（三表 INSERT）。"""
     parts = []
     if include_header:

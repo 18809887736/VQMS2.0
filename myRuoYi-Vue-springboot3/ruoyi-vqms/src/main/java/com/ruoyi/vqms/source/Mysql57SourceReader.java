@@ -98,8 +98,10 @@ public class Mysql57SourceReader implements SourceReader {
             if (t == null || t.isBefore(start) || t.isAfter(end)) {
                 continue;
             }
-            if (zeroBadpointBlock && (isZero(r.highSv()) || isZero(r.lowSv()) || isZero(r.averageSv()))) {
-                continue; // 0.0 脏值拦截（防包络被毒化）
+            // 坏点只看 high/low（判定/对账仅消费这两侧）；average_SV 生成器已恒空（2026-09-05 拍板），
+            // null/0 均不算坏点——第26条对账的 average 回退 (low+high)/2 由消费方自理
+            if (zeroBadpointBlock && (isZero(r.highSv()) || isZero(r.lowSv()))) {
+                continue;
             }
             if (!seen.add(r.saveTimeRaw().trim() + "|" + r.busbarNum())) {
                 continue; // 去重

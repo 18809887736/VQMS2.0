@@ -14,12 +14,14 @@ def emit_his_curve_sv_rows(bundle: ScenarioBundle) -> list[dict]:
     for cp in bundle.curve:
         # jitter：写入时间偏离目标分钟（57/58 秒），取整后才落回目标分钟
         raw = jitter_save_time(cp.t, variant=int(cp.busbar_num))
+        # average_SV/plan_SV 恒空（Leo 2026-09-05 拍板防扰乱视听）：判定链只消费 high/low，
+        # 这两列历史上是废值/干扰项口径，写实值只会误导排查（S15 场景的 plan 干扰语义随之退役）
         rows.append({
             "save_time": format_sv_save_time(raw),
             "busbar_num": cp.busbar_num,
             "high_SV": cp.high_sv,
             "low_SV": cp.low_sv,
-            "average_SV": cp.average_sv if cp.average_sv is not None else cp.high_sv,
-            "plan_SV": cp.plan_sv if cp.plan_sv is not None else 10245,
+            "average_SV": None,
+            "plan_SV": None,
         })
     return rows

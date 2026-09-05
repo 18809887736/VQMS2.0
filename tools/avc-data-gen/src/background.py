@@ -63,8 +63,8 @@ def emit_background_rows(day_idx: int, day: datetime, occupied: dict, is_scenari
                 "busbar_num": busbar,
                 "high_SV": high,
                 "low_SV": low,
-                "average_SV": high,
-                "plan_SV": 10245,  # 废值口径（算法不读）
+                "average_SV": None,  # 恒空（防扰乱视听，2026-09-05 拍板）
+                "plan_SV": None,
             })
 
     # ── warn_info：5 分钟一条目标值指令，轮转码均匀轮转 ──
